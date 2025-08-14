@@ -1,0 +1,5 @@
+{
+  "name": "MyStake Mini Games Clone",
+  "description": "A visually-rich replica of the MyStake mini-games section, built with React and Tailwind CSS. Features an animated grid of games with 3D card effects and dynamic background particles.",
+  "requestFramePermissions": []
+}

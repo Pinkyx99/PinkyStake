@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import CloseIcon from './icons/CloseIcon';

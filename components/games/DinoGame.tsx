@@ -129,17 +129,16 @@ const DinoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         return () => { isMounted.current = false; };
     }, []);
 
-    const handleCollect = useCallback((collectArgs: { panel: 1 | 2; multiplier: number }) => {
-        const { panel, multiplier: collectMultiplier } = collectArgs;
+    const handleCollect = useCallback(async (panel: 1 | 2, collectMultiplier: number) => {
+        const betState = panel === 1 ? bet1Ref.current : bet2Ref.current;
         const stateUpdater = panel === 1 ? setBet1 : setBet2;
-        stateUpdater(betState => {
-            if (betState.isPlaced && !betState.hasCollected) {
-                const winnings = betState.amount * collectMultiplier;
-                adjustBalance(winnings);
-                return { ...betState, hasCollected: true };
-            }
-            return betState;
-        });
+
+        if (betState.isPlaced && !betState.hasCollected) {
+            // Update state first to prevent multiple calls
+            stateUpdater(b => ({ ...b, hasCollected: true }));
+            const winnings = betState.amount * collectMultiplier;
+            await adjustBalance(winnings);
+        }
     }, [adjustBalance]);
 
     useEffect(() => {
@@ -190,15 +189,19 @@ const DinoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const currentBet2 = bet2Ref.current;
                 
                 // Auto-collect logic
-                if (currentBet1.isPlaced && !currentBet1.hasCollected && currentBet1.autoCollect && currentMultiplier >= currentBet1.collectAt) handleCollect({ panel: 1, multiplier: currentBet1.collectAt });
-                if (currentBet2.isPlaced && !currentBet2.hasCollected && currentBet2.autoCollect && currentMultiplier >= currentBet2.collectAt) handleCollect({ panel: 2, multiplier: currentBet2.collectAt });
+                if (currentBet1.isPlaced && !currentBet1.hasCollected && currentBet1.autoCollect && currentMultiplier >= currentBet1.collectAt) {
+                    handleCollect(1, currentBet1.collectAt);
+                }
+                if (currentBet2.isPlaced && !currentBet2.hasCollected && currentBet2.autoCollect && currentMultiplier >= currentBet2.collectAt) {
+                    handleCollect(2, currentBet2.collectAt);
+                }
 
                 gameLoopRef.current = requestAnimationFrame(animate);
             };
             gameLoopRef.current = requestAnimationFrame(animate);
             
             return () => {
-                if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+                if (gameLoopRef.current) window.cancelAnimationFrame(gameLoopRef.current);
             };
         }
 
@@ -212,16 +215,16 @@ const DinoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
     }, [phase, handleCollect]);
     
-    const handlePlaceBet = (panel: 1 | 2) => {
+    const handlePlaceBet = async (panel: 1 | 2) => {
         const stateUpdater = panel === 1 ? setBet1 : setBet2;
         const betState = panel === 1 ? bet1 : bet2;
 
         if (betState.isPlaced) { // Cancel bet
             stateUpdater(s => ({...s, isPlaced: false}));
-            adjustBalance(betState.amount);
+            await adjustBalance(betState.amount);
         } else { // Place bet
             if (profile && profile.balance >= betState.amount) {
-                adjustBalance(-betState.amount);
+                await adjustBalance(-betState.amount);
                 stateUpdater(s => ({...s, isPlaced: true}));
             }
         }
@@ -294,8 +297,8 @@ const DinoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 </div>
             </div>
             <div className="flex gap-4">
-                <BetPanel betState={bet1} onBetStateChange={(s) => setBet1(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(1)} onCollect={() => handleCollect({ panel: 1, multiplier: multiplier })} gamePhase={phase} canBet={!!profile && profile.balance >= bet1.amount} currentMultiplier={multiplier} />
-                <BetPanel betState={bet2} onBetStateChange={(s) => setBet2(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(2)} onCollect={() => handleCollect({ panel: 2, multiplier: multiplier })} gamePhase={phase} canBet={!!profile && profile.balance >= bet2.amount} currentMultiplier={multiplier} />
+                <BetPanel betState={bet1} onBetStateChange={(s) => setBet1(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(1)} onCollect={() => handleCollect(1, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet1.amount} currentMultiplier={multiplier} />
+                <BetPanel betState={bet2} onBetStateChange={(s) => setBet2(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(2)} onCollect={() => handleCollect(2, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet2.amount} currentMultiplier={multiplier} />
             </div>
         </div>
       </footer>

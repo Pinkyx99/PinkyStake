@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ onShowLeaderboard, onSignInClick }) => 
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center gap-8">
-            <a href="/" onClick={(e) => { e.preventDefault(); window.location.href = '/'; }} className="text-3xl font-extrabold tracking-tight cursor-pointer">
+            <a href="#/" onClick={(e) => { e.preventDefault(); window.location.hash = '/'; }} className="text-3xl font-extrabold tracking-tight cursor-pointer">
               <span style={{textShadow: '0 0 8px rgba(96, 165, 250, 0.5)'}} className="text-blue-400">My</span>
               <span className="text-white">Stake</span>
             </a>

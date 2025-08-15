@@ -73,7 +73,7 @@ const BetPanel: React.FC<{
 
     const actionButton = () => {
         if (isRunningWithBet) {
-             return <button onClick={onCollect} className="w-full h-full text-xl font-bold rounded-md bg-purple-500 hover:bg-purple-600 transition-colors text-white uppercase">Cashout</button>;
+             return <button onClick={() => onCollect()} className="w-full h-full text-xl font-bold rounded-md bg-purple-500 hover:bg-purple-600 transition-colors text-white uppercase">Cashout</button>;
         }
         if (betState.isPlaced && isBettingPhase) {
              return <button onClick={onPlaceBet} className="w-full h-full text-xl font-bold rounded-md bg-red-500 hover:bg-red-600 transition-colors text-white uppercase">Cancel</button>;
@@ -129,8 +129,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
-    const handleCollect = useCallback(async (collectArgs: { panel: 1 | 2; multiplier: number }) => {
-        const { panel, multiplier: collectMultiplier } = collectArgs;
+    const handleCollect = useCallback(async (panel: 1 | 2, collectMultiplier: number) => {
         const stateUpdater = panel === 1 ? setBet1 : setBet2;
         const betState = panel === 1 ? bet1Ref.current : bet2Ref.current;
         
@@ -188,8 +187,12 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const currentBet1 = bet1Ref.current;
                 const currentBet2 = bet2Ref.current;
 
-                if (currentBet1.autoCollect && currentBet1.isPlaced && !currentBet1.hasCollected && currentMultiplier >= currentBet1.collectAt) handleCollect({ panel: 1, multiplier: currentBet1.collectAt });
-                if (currentBet2.autoCollect && currentBet2.isPlaced && !currentBet2.hasCollected && currentMultiplier >= currentBet2.collectAt) handleCollect({ panel: 2, multiplier: currentBet2.collectAt });
+                if (currentBet1.autoCollect && currentBet1.isPlaced && !currentBet1.hasCollected && currentMultiplier >= currentBet1.collectAt) {
+                    handleCollect(1, currentBet1.collectAt);
+                }
+                if (currentBet2.autoCollect && currentBet2.isPlaced && !currentBet2.hasCollected && currentMultiplier >= currentBet2.collectAt) {
+                    handleCollect(2, currentBet2.collectAt);
+                }
                 
                 gameLoopRef.current = requestAnimationFrame(animate);
             };
@@ -205,7 +208,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         return () => {
             if (timerId) clearTimeout(timerId);
             if (intervalId) clearInterval(intervalId);
-            if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+            if (gameLoopRef.current) window.cancelAnimationFrame(gameLoopRef.current);
         };
     }, [phase, handleCollect]);
 
@@ -351,8 +354,8 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       <footer className="shrink-0 bg-slate-800/30 p-4">
         <div className="w-full max-w-4xl mx-auto flex gap-4">
-            <BetPanel betState={bet1} onBetStateChange={(s) => setBet1(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(1)} onCollect={() => handleCollect({ panel: 1, multiplier })} gamePhase={phase} canBet={!!profile && profile.balance >= bet1.amount} />
-            <BetPanel betState={bet2} onBetStateChange={(s) => setBet2(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(2)} onCollect={() => handleCollect({ panel: 2, multiplier })} gamePhase={phase} canBet={!!profile && profile.balance >= bet2.amount} />
+            <BetPanel betState={bet1} onBetStateChange={(s) => setBet1(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(1)} onCollect={() => handleCollect(1, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet1.amount} />
+            <BetPanel betState={bet2} onBetStateChange={(s) => setBet2(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(2)} onCollect={() => handleCollect(2, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet2.amount} />
         </div>
       </footer>
     </div>

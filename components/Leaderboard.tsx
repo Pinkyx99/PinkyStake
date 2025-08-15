@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import CloseIcon from './icons/CloseIcon';
 import TrophyIcon from './icons/TrophyIcon';

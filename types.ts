@@ -1,5 +1,5 @@
-
-import { type Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
+import { type Database } from './lib/database.types';
 
 export interface Game {
   id: number;
@@ -9,10 +9,6 @@ export interface Game {
   color: 'orange' | 'purple' | 'green' | 'brown' | 'yellow' | 'teal' | 'pink' | 'blue' | 'cyan' | 'red';
 }
 
-export interface Profile {
-  id: string;
-  username: string;
-  balance: number;
-}
+export type Profile = Database['public']['Tables']['profiles']['Row'];
 
-export { Session };
+export type { Session };

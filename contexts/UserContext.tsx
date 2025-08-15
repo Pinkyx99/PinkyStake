@@ -1,8 +1,8 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { type Profile, type Session } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { User } from '@supabase/supabase-js';
+import type { Profile, Session } from '../types';
 import { supabase } from '../lib/supabase';
-import { type User } from '@supabase/supabase-js';
 
 interface UserContextType {
   session: Session | null;
@@ -10,7 +10,7 @@ interface UserContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   adjustBalance: (amount: number) => Promise<void>;
-  updateUsername: (username: string) => Promise<void>;
+  updateUsername: (string: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,126 +20,153 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (user: User | undefined) => {
-    if (!user) {
-      setProfile(null);
-      return;
+  // This function handles fetching an existing profile or creating a new one for a user.
+  // It's wrapped in useCallback to prevent it from being recreated on every render.
+  const getUserProfile = useCallback(async (user: User): Promise<Profile | null> => {
+    // 1. Try to fetch the user's profile from the database.
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    // If an error occurs that ISN'T the "no rows found" error, it's a real problem.
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error("Database Error: Could not fetch user profile.", fetchError);
+      return null;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        if (error.code === 'PGRST116') { // Profile doesn't exist, create it
-          const newProfile = {
-            id: user.id,
-            username: (user.user_metadata.username as string) || user.email?.split('@')[0] || `user_${user.id.substring(0, 6)}`,
-            balance: 1000.00,
-          };
-          const { error: insertError } = await supabase.from('profiles').insert(newProfile);
-          if (insertError) {
-             console.error('Error creating profile:', insertError);
-          } else {
-            setProfile(newProfile);
-          }
-        }
-      } else {
-        setProfile(data);
-      }
-    } catch (e) {
-      console.error('An unexpected error occurred while fetching profile:', e);
+    // If a profile was found, return it.
+    if (existingProfile) {
+      return existingProfile;
     }
+
+    // 2. If no profile was found, this is a new user. We need to create their profile.
+    console.log("No profile found for new user, creating one...");
+    const usernameFromMeta = user.user_metadata?.username;
+    const newUsername = (typeof usernameFromMeta === 'string' && usernameFromMeta)
+      ? usernameFromMeta
+      : (user.email?.split('@')[0] || `user_${user.id.substring(0, 6)}`);
+      
+    const newProfileData = {
+      id: user.id,
+      username: newUsername,
+      balance: 1000.00, // Generous starting balance for all new players!
+    };
+
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert([newProfileData])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Database Error: Could not create user profile.", insertError);
+      return null;
+    }
+    
+    console.log("Profile created successfully.");
+    return newProfile;
   }, []);
-  
+
   useEffect(() => {
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      await fetchProfile(session?.user);
-      setLoading(false);
-    };
+    // This is the core authentication listener for the entire application.
+    // It runs once on initial page load to check for an existing session,
+    // and then continues to listen for any changes (e.g., user logs in or out).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        try {
+          // Whenever the authentication state changes, we update our session and profile state.
+          setSession(session);
 
-    getInitialSession();
+          if (session?.user) {
+            // If a user is logged in, fetch their profile data.
+            const userProfile = await getUserProfile(session.user);
+            setProfile(userProfile);
+          } else {
+            // If no user is logged in (e.g., after logout), clear the profile.
+            setProfile(null);
+          }
+        } catch (e) {
+          // This will catch any unexpected errors during the profile fetch/create process.
+          console.error("An unexpected error occurred during auth state change:", e);
+          setProfile(null);
+          setSession(null);
+        } finally {
+          // CRITICAL: This ensures the main application's loading screen is always removed,
+          // regardless of whether the user is logged in or an error occurred. This
+          // is the definitive fix for the infinite loading screen.
+          setLoading(false);
+        }
+      }
+    );
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      await fetchProfile(session?.user);
-      setLoading(false);
-    });
-
+    // When the UserProvider is unmounted, we clean up the auth listener to prevent memory leaks.
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [getUserProfile]);
 
-  const profileRef = useRef(profile);
-  useEffect(() => {
-    profileRef.current = profile;
-  }, [profile]);
-  
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfile(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Error signing out:', error);
+    // The onAuthStateChange listener above will automatically handle clearing the session and profile.
   };
   
   const adjustBalance = useCallback(async (amount: number) => {
-    const currentProfile = profileRef.current;
-    if (!currentProfile) {
+    if (!profile) {
+      console.error("Cannot adjust balance: no user profile.");
       throw new Error("User must be logged in to adjust balance.");
     }
     
-    const newBalance = currentProfile.balance + amount;
-    
-    setProfile(p => p ? { ...p, balance: newBalance } : null);
+    const originalProfile = profile;
+    const newBalance = originalProfile.balance + amount;
+
+    // Optimistically update the UI for a smoother experience
+    setProfile({ ...originalProfile, balance: newBalance });
 
     const { error } = await supabase
       .from('profiles')
       .update({ balance: newBalance })
-      .eq('id', currentProfile.id);
-      
+      .eq('id', originalProfile.id);
+        
     if (error) {
-      console.error("Error updating balance:", error);
-      setProfile(currentProfile); // Revert on error
+      console.error("Error updating balance, rolling back UI:", error);
+      // Rollback UI on database error
+      setProfile(originalProfile);
       throw error;
     }
-  }, []);
+  }, [profile]);
 
   const updateUsername = useCallback(async (newUsername: string) => {
-    const currentProfile = profileRef.current;
-    if (!currentProfile) {
+    if (!profile || !session) {
       throw new Error("User must be logged in to update username.");
     }
 
-    // Update public profiles table
+    const originalProfile = profile;
+    setProfile({ ...originalProfile, username: newUsername });
+
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ username: newUsername })
-      .eq('id', currentProfile.id);
+      .eq('id', originalProfile.id);
       
-    if (profileError) throw profileError;
+    if (profileError) {
+      setProfile(originalProfile); // Rollback
+      throw profileError;
+    }
 
-    // Update Supabase Auth user_metadata
-     const { data: { user }, error: userError } = await supabase.auth.updateUser({
+    const { error: userError } = await supabase.auth.updateUser({
       data: { username: newUsername }
     });
 
     if (userError) {
-        // Revert profile change if auth update fails
-        await supabase
-          .from('profiles')
-          .update({ username: currentProfile.username })
-          .eq('id', currentProfile.id);
+        // Rollback profile username if auth user update fails
+        await supabase.from('profiles').update({ username: originalProfile.username }).eq('id', originalProfile.id);
+        setProfile(originalProfile); // Rollback UI
         throw userError;
     }
-    
-    setProfile(p => p ? { ...p, username: newUsername } : null);
-  }, []);
+  }, [profile, session]);
 
   const value = {
     session,

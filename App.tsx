@@ -14,9 +14,10 @@ import CrashGame from './components/games/CrashGame';
 import LimboGame from './components/games/LimboGame';
 import KenoGame from './components/games/KenoGame';
 import WheelGame from './components/games/WheelGame';
-import { UserProvider } from './contexts/UserContext';
+import { useUser } from './contexts/UserContext';
 import Leaderboard from './components/Leaderboard';
 import AuthModal from './components/AuthModal';
+import SpinnerIcon from './components/icons/SpinnerIcon';
 
 const GAMES: Game[] = [
   { id: 1, title: '', slug: 'chicken', imageUrl: 'https://i.imgur.com/8PdQTGW.png', color: 'orange' },
@@ -56,20 +57,22 @@ const MainPage: React.FC<{ onGameSelect: (game: Game) => void }> = ({ onGameSele
   </main>
 );
 
-const AppContent: React.FC = () => {
-  const [path, setPath] = useState(window.location.pathname);
+const App: React.FC = () => {
+  const { loading } = useUser();
+  const getPath = () => window.location.hash.substring(1) || '/';
+  const [path, setPath] = useState(getPath());
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const navigate = useCallback((to: string) => {
-    window.history.pushState({}, '', to);
+    window.location.hash = to;
     setPath(to);
   }, []);
   
   useEffect(() => {
-    const handlePopState = () => setPath(window.location.pathname);
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    const handleHashChange = () => setPath(getPath());
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
   
   const handleGameSelect = (game: Game) => {
@@ -84,6 +87,14 @@ const AppContent: React.FC = () => {
     navigate('/');
   };
   
+  if (loading) {
+    return (
+      <div className="bg-[#1a1d3a] min-h-screen w-full flex items-center justify-center">
+        <SpinnerIcon className="w-16 h-16 text-purple-400" />
+      </div>
+    );
+  }
+
   const renderPage = () => {
     const parts = path.split('/').filter(Boolean);
     const route = parts[0];
@@ -123,14 +134,6 @@ const AppContent: React.FC = () => {
     <ErrorBoundary>
       {renderPage()}
     </ErrorBoundary>
-  );
-};
-
-const App: React.FC = () => {
-  return (
-    <UserProvider>
-      <AppContent />
-    </UserProvider>
   );
 };
 

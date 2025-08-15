@@ -11,6 +11,7 @@ import MinusIcon from '../icons/MinusIcon';
 import ChevronUpIcon from '../icons/ChevronUpIcon';
 import ChevronDownIcon from '../icons/ChevronDownIcon';
 import LimboRulesModal from './limbo/LimboRulesModal';
+import { useSound } from '../../hooks/useSound';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -40,14 +41,15 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const isMounted = useRef(true);
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { playSound } = useSound();
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
-      if (animationIntervalRef.current) {
-        clearInterval(animationIntervalRef.current);
-      }
+      if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
+      if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
     };
   }, []);
 
@@ -80,19 +82,22 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
     if (!profile || betAmount > profile.balance || gamePhase !== 'betting') return;
 
     await adjustBalance(-betAmount);
+    playSound('bet');
 
     if (!isMounted.current) return;
     setGamePhase('playing');
     setIsWin(null);
 
-    const startTime = Date.now();
     animationIntervalRef.current = setInterval(() => {
         if (!isMounted.current) return;
         setDisplayResult(Math.random() * 10);
     }, 50);
+    
+    tickIntervalRef.current = setInterval(() => playSound('tick'), 120);
 
     setTimeout(async () => {
         if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
+        if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
         if (!isMounted.current) return;
 
         const randomRoll = Math.random() * 100;
@@ -101,8 +106,10 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
 
         let finalResult: number;
         if (won) {
+            playSound('win');
             finalResult = targetMultiplier + Math.random() * (targetMultiplier * 2);
         } else {
+            playSound('lose');
             finalResult = 1.00 + Math.random() * (targetMultiplier - 1.00);
         }
         setDisplayResult(finalResult);
@@ -153,14 +160,14 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
       </header>
 
       <main className="flex-grow flex flex-col items-center justify-center p-4">
-        <div className={`text-9xl font-bold transition-colors duration-300 ${getResultColor()}`} style={{textShadow: '0 0 20px currentColor'}}>
+        <div className={`text-7xl md:text-9xl font-bold transition-colors duration-300 ${getResultColor()}`} style={{textShadow: '0 0 20px currentColor'}}>
             {displayResult.toFixed(2)}
         </div>
       </main>
 
       <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-        <div className="w-full max-w-4xl mx-auto flex items-end justify-between gap-4">
-            <div className="flex items-end gap-3">
+        <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center md:items-end justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-end gap-3">
                  <div>
                     <label className="text-xs text-gray-400 mb-1 block">Multiplier</label>
                     <div className="flex items-center bg-[#2f324d] rounded-md p-1 w-40">
@@ -178,7 +185,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
                 </div>
             </div>
 
-            <div className="flex items-end gap-3">
+            <div className="flex flex-col sm:flex-row items-end gap-3">
                 <div className="flex-grow">
                     <label className="text-xs text-gray-400 mb-1 block">Bet</label>
                     <div className="flex items-center bg-[#2f324d] rounded-md p-1">
@@ -197,7 +204,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
                 </div>
             </div>
 
-            <div className="w-64">
+            <div className="w-full md:w-64">
                 <button onClick={handleBet} disabled={!isBettingPhase || !profile || betAmount > profile.balance} className="w-full h-14 text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
                     Bet
                 </button>

@@ -14,10 +14,8 @@ import CrashGame from './components/games/CrashGame';
 import LimboGame from './components/games/LimboGame';
 import KenoGame from './components/games/KenoGame';
 import WheelGame from './components/games/WheelGame';
-import { useUser } from './contexts/UserContext';
-import Leaderboard from './components/Leaderboard';
-import AuthModal from './components/AuthModal';
-import SpinnerIcon from './components/icons/SpinnerIcon';
+import PumpGame from './components/games/PumpGame';
+import FlipGame from './components/games/FlipGame';
 
 const GAMES: Game[] = [
   { id: 1, title: '', slug: 'chicken', imageUrl: 'https://i.imgur.com/8PdQTGW.png', color: 'orange' },
@@ -25,19 +23,21 @@ const GAMES: Game[] = [
   { id: 3, title: '', slug: 'doors', imageUrl: 'https://i.imgur.com/ntkG6tv.png', color: 'blue' },
   { id: 16, title: '', slug: 'roulette', imageUrl: 'https://i.imgur.com/eqkkVYJ.png', color: 'red' },
   { id: 14, title: '', slug: 'dice', imageUrl: 'https://i.imgur.com/Uy1mnkF.png', color: 'green' },
-  { id: 4, title: 'CRASH', slug: 'crash', imageUrl: 'https://imgur.com/rgW3cYA.png', color: 'purple' },
-  { id: 17, title: 'LIMBO', slug: 'limbo', imageUrl: 'https://i.imgur.com/nh617zV.png', color: 'purple' },
-  { id: 18, title: 'Keno', slug: 'keno', imageUrl: 'https://i.imgur.com/hLABETK.png', color: 'blue' },
-  { id: 19, title: 'Wheel', slug: 'wheel', imageUrl: 'https://imgur.com/JwBwWh9.png', color: 'yellow' },
-  { id: 5, title: 'SQUID GAME', imageUrl: 'https://i.imgur.com/wI4Vv3M.png', color: 'purple' },
-  { id: 6, title: 'CATCHUP', imageUrl: 'https://i.imgur.com/yO8pB9f.png', color: 'green' },
-  { id: 7, title: 'BRAINROT', imageUrl: 'https://i.imgur.com/3q1sJ2L.png', color: 'brown' },
-  { id: 8, title: 'WINGZ', imageUrl: 'https://i.imgur.com/s6p4eF8.png', color: 'teal' },
-  { id: 9, title: 'THIMBLES', imageUrl: 'https://i.imgur.com/5J7m1jR.png', color: 'yellow' },
-  { id: 10, title: 'FROGGY', imageUrl: 'https://i.imgur.com/9n9s8Z2.png', color: 'green' },
-  { id: 11, title: 'AQUARINGS', imageUrl: 'https://i.imgur.com/9f8D4K7.png', color: 'blue' },
-  { id: 12, title: 'PLINKO', imageUrl: 'https://i.imgur.com/cO1k2L4.png', color: 'pink' },
-  { id: 13, title: 'ICEFIELD', imageUrl: 'https://i.imgur.com/z1kH0B5.png', color: 'cyan' },
+  { id: 4, title: '', slug: 'crash', imageUrl: 'https://i.imgur.com/cu8O4GF.png', color: 'purple' },
+  { id: 17, title: '', slug: 'limbo', imageUrl: 'https://i.imgur.com/picS5KQ.png', color: 'purple' },
+  { id: 18, title: '', slug: 'keno', imageUrl: 'https://i.imgur.com/uKMIrL9.png', color: 'blue' },
+  { id: 19, title: '', slug: 'wheel', imageUrl: 'https://i.imgur.com/7xzgBDx.png', color: 'yellow' },
+  { id: 20, title: '', slug: 'pump', imageUrl: 'https://i.imgur.com/4qoWhQi.png', color: 'red' },
+  { id: 21, title: '', slug: 'flip', imageUrl: 'https://i.imgur.com/nxpJKT1.png', color: 'yellow' },
+  { id: 5, title: '', imageUrl: 'https://i.imgur.com/wI4Vv3M.png', color: 'purple' },
+  { id: 6, title: '', imageUrl: 'https://i.imgur.com/yO8pB9f.png', color: 'green' },
+  { id: 7, title: '', imageUrl: 'https://i.imgur.com/3q1sJ2L.png', color: 'brown' },
+  { id: 8, title: '', imageUrl: 'https://i.imgur.com/s6p4eF8.png', color: 'teal' },
+  { id: 9, title: '', imageUrl: 'https://i.imgur.com/5J7m1jR.png', color: 'yellow' },
+  { id: 10, title: '', imageUrl: 'https://i.imgur.com/9n9s8Z2.png', color: 'green' },
+  { id: 11, title: '', imageUrl: 'https://i.imgur.com/9f8D4K7.png', color: 'blue' },
+  { id: 12, title: '', imageUrl: 'https://i.imgur.com/cO1k2L4.png', color: 'pink' },
+  { id: 13, title: '', imageUrl: 'https://i.imgur.com/z1kH0B5.png', color: 'cyan' },
 ];
 
 const MainPage: React.FC<{ onGameSelect: (game: Game) => void }> = ({ onGameSelect }) => (
@@ -58,11 +58,8 @@ const MainPage: React.FC<{ onGameSelect: (game: Game) => void }> = ({ onGameSele
 );
 
 const App: React.FC = () => {
-  const { loading } = useUser();
   const getPath = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPath());
-  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const navigate = useCallback((to: string) => {
     window.location.hash = to;
@@ -76,7 +73,7 @@ const App: React.FC = () => {
   }, []);
   
   const handleGameSelect = (game: Game) => {
-    if (game.slug && ['chicken', 'blackjack', 'doors', 'dice', 'roulette', 'crash', 'limbo', 'keno', 'wheel'].includes(game.slug)) {
+    if (game.slug && ['chicken', 'blackjack', 'doors', 'dice', 'roulette', 'crash', 'limbo', 'keno', 'wheel', 'pump', 'flip'].includes(game.slug)) {
       navigate(`/game/${game.slug}`);
     } else {
       alert(`The game "${game.title || 'selected game'}" is not yet implemented.`);
@@ -86,14 +83,6 @@ const App: React.FC = () => {
   const handleGoBack = () => {
     navigate('/');
   };
-  
-  if (loading) {
-    return (
-      <div className="bg-[#1a1d3a] min-h-screen w-full flex items-center justify-center">
-        <SpinnerIcon className="w-16 h-16 text-purple-400" />
-      </div>
-    );
-  }
 
   const renderPage = () => {
     const parts = path.split('/').filter(Boolean);
@@ -111,18 +100,17 @@ const App: React.FC = () => {
         case 'limbo': return <LimboGame onBack={handleGoBack} />;
         case 'keno': return <KenoGame onBack={handleGoBack} />;
         case 'wheel': return <WheelGame onBack={handleGoBack} />;
+        case 'pump': return <PumpGame onBack={handleGoBack} />;
+        case 'flip': return <FlipGame onBack={handleGoBack} />;
         default:
           return null;
       }
     }
     
-    // All other paths render the main page with its specific layout
     return (
       <div className="relative min-h-screen w-full bg-[#1a1d3a] text-white font-poppins overflow-x-hidden">
-        {isLeaderboardOpen && <Leaderboard onClose={() => setIsLeaderboardOpen(false)} />}
-        {isAuthModalOpen && <AuthModal onClose={() => setIsAuthModalOpen(false)} />}
         <AnimatedParticles />
-        <Header onShowLeaderboard={() => setIsLeaderboardOpen(true)} onSignInClick={() => setIsAuthModalOpen(true)} />
+        <Header />
         <div className="relative z-10" style={{ isolation: 'isolate' }}>
            <MainPage onGameSelect={handleGameSelect} />
         </div>

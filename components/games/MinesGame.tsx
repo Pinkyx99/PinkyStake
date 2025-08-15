@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -14,6 +13,7 @@ import MinesTileIcon from '../icons/MinesTileIcon';
 import GemIcon from '../icons/GemIcon';
 import MineIcon from '../icons/MineIcon';
 import { useUser } from '../../contexts/UserContext';
+import { useSound } from '../../hooks/useSound';
 
 const GRID_SIZE = 25;
 const MIN_BET = 0.20;
@@ -50,6 +50,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
   const [nextWin, setNextWin] = useState(0);
   const [timer, setTimer] = useState(0);
   const isMounted = useRef(true);
+  const { playSound } = useSound();
 
   useEffect(() => {
     isMounted.current = true;
@@ -135,6 +136,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
   const handleBet = () => {
     if (!profile || betAmount > profile.balance) return;
     
+    playSound('bet');
     adjustBalance(-betAmount);
 
     if (!isMounted.current) return;
@@ -149,6 +151,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
   const handleCashout = () => {
     if (!isGameInProgress || revealedGems === 0) return;
     
+    playSound('cashout');
     adjustBalance(winnings);
 
     if (!isMounted.current) return;
@@ -157,6 +160,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
   };
   
   const handlePlayAgain = () => {
+    playSound('click');
     setGameState('config');
     setGrid([]);
     setWinnings(0);
@@ -170,10 +174,12 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
     newGrid[index] = { ...newGrid[index], revealed: true };
 
     if (newGrid[index].type === 'mine') {
+      playSound('pop');
       setGameState('busted');
       const finalGrid = newGrid.map(item => ({ ...item, revealed: true }));
       setGrid(finalGrid);
     } else {
+      playSound('reveal');
       setGrid(newGrid);
     }
   };
@@ -258,8 +264,8 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
       </main>
 
       <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-        <div className="w-full max-w-xl mx-auto flex items-stretch justify-center gap-4">
-            <div className="flex-1 flex items-center justify-center gap-3">
+        <div className="w-full max-w-xl mx-auto flex flex-col md:flex-row items-stretch justify-center gap-4">
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <div className="w-48">
                     <label className="text-xs font-semibold text-gray-400 mb-1 block text-left ml-1">Bet</label>
                     <div className="flex items-center bg-[#2f324d] rounded-md p-1">
@@ -280,7 +286,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack }) => {
                     <p className="text-center text-xs text-gray-500 mt-1">Initial multiplier ({calculateTotalMultiplier(1).toFixed(2)}x)</p>
                 </div>
             </div>
-            <div className="w-48">{actionButton}</div>
+            <div className="w-full md:w-48 h-14 md:h-auto">{actionButton}</div>
         </div>
       </footer>
     </div>

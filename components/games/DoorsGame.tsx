@@ -12,6 +12,7 @@ import useAnimatedBalance from '../../hooks/useAnimatedBalance';
 import DoorComponent from './doors/Door';
 import GameRulesModal from './doors/GameRulesModal';
 import { useUser } from '../../contexts/UserContext';
+import { useSound } from '../../hooks/useSound';
 
 const INITIAL_DOOR_COUNT = 10;
 const MIN_BET = 0.20;
@@ -72,6 +73,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const doorRefs = useRef<(HTMLDivElement | null)[]>([]);
   const isMounted = useRef(true);
+  const { playSound } = useSound();
 
   useEffect(() => {
     isMounted.current = true;
@@ -142,6 +144,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const handleBet = async () => {
     if (!profile || betAmount > profile.balance) return;
     
+    playSound('bet');
     await adjustBalance(-betAmount);
     if (!isMounted.current) return;
     setLevel(0);
@@ -155,6 +158,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const handleDoorClick = (door: Door, index: number) => {
     if (gamePhase !== 'playing' || !gridRef.current || !doorRefs.current[index]) return;
     
+    playSound('click');
     const gridRect = gridRef.current.getBoundingClientRect();
     const doorRect = doorRefs.current[index]!.getBoundingClientRect();
     const gridCenter = gridRect.left + gridRect.width / 2;
@@ -168,6 +172,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const handleCashout = async () => {
     if (gamePhase !== 'playing' || level === 0) return;
     
+    playSound('cashout');
     await adjustBalance(winnings);
     if (!isMounted.current) return;
     setGamePhase('cashed_out');
@@ -183,6 +188,11 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
           return () => clearTimeout(timer);
         }
         if (gamePhase === 'reveal_action' && selectedDoor) {
+          if (selectedDoor.door.type === 'safe') {
+              playSound('reveal');
+          } else {
+              playSound('pop');
+          }
           if(isMounted.current) setDoorAnimationState(selectedDoor.door.type === 'safe' ? 'swing' : 'thud');
           const nextPhaseDelay = selectedDoor.door.type === 'safe' ? 600 : 800; 
           const timer = setTimeout(() => {
@@ -200,6 +210,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
                 const finalWinnings = Math.min(newWinnings, MAX_PROFIT);
                 setWinnings(finalWinnings);
                 setLevel(newLevel);
+                playSound('win');
                 await adjustBalance(finalWinnings);
                 if (!isMounted.current) return;
                 setGamePhase('cashed_out');
@@ -230,9 +241,10 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
         }
     }
     processGamePhase();
-  }, [gamePhase, selectedDoor, level, betAmount, riskLevel, calculateTotalMultiplier, createDoorsForLevel, adjustBalance]);
+  }, [gamePhase, selectedDoor, level, betAmount, riskLevel, calculateTotalMultiplier, createDoorsForLevel, adjustBalance, playSound]);
 
   const handlePlayAgain = () => {
+    playSound('click');
     setGamePhase('config');
     setLevel(0);
     setWinnings(0);
@@ -320,7 +332,8 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
             </div>
             
             <div className='doors-camera' style={cameraStyle}>
-                <div ref={gridRef} className={`doors-grid min-h-[220px] transition-opacity duration-300 ${gamePhase !== 'transitioning' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="w-full doors-scroll-wrapper">
+                <div ref={gridRef} className={`doors-grid min-h-[190px] md:min-h-[220px] w-max mx-auto transition-opacity duration-300 ${gamePhase !== 'transitioning' ? 'opacity-100' : 'opacity-0'}`}>
                     {doors.map((door, index) => (
                         <DoorComponent
                             ref={el => { if(el) doorRefs.current[index] = el }}
@@ -334,12 +347,13 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
                         />
                     ))}
                 </div>
+              </div>
             </div>
         </div>
         
         <footer className="relative z-30 w-full bg-[#1a1b2f] p-4 border-t border-gray-700/50 shrink-0">
-            <div className="w-full max-w-4xl mx-auto flex items-stretch justify-center gap-8">
-                <div className="flex items-center gap-4">
+            <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center md:items-stretch justify-center gap-4 md:gap-8">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div>
                         <label className="text-xs font-semibold text-gray-400 mb-1 block">Bet</label>
                         <div className="flex items-center bg-[#2f324d] rounded-md p-1">
@@ -358,7 +372,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
                         </div>
                     </div>
                 </div>
-                <div className="flex-grow max-w-xs">{actionButton}</div>
+                <div className="flex-grow max-w-xs w-full md:w-auto h-14 md:h-auto">{actionButton}</div>
             </div>
         </footer>
 

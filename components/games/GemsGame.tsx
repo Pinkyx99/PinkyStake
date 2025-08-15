@@ -13,6 +13,7 @@ import GemTileIcon from '../icons/GemTileIcon';
 import DiamondIcon from '../icons/DiamondIcon';
 import BombIcon from '../icons/BombIcon';
 import { useUser } from '../../contexts/UserContext';
+import { useSound } from '../../hooks/useSound';
 
 const GRID_SIZE = 25;
 const MIN_BET = 0.20;
@@ -50,6 +51,7 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
   
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const isMounted = useRef(true);
+  const { playSound } = useSound();
 
   useEffect(() => {
     isMounted.current = true;
@@ -149,6 +151,7 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
   const handleBet = () => {
     if (!profile || betAmount > profile.balance) return;
     
+    playSound('bet');
     adjustBalance(-betAmount);
 
     if (!isMounted.current) return;
@@ -160,6 +163,7 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
   const handleCashout = () => {
     if (!isGameInProgress || revealedGems === 0) return;
     
+    playSound('cashout');
     adjustBalance(winnings);
     
     if (!isMounted.current) return;
@@ -168,6 +172,7 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
   };
   
   const handlePlayAgain = () => {
+    playSound('click');
     setGameState('config');
     setGrid([]);
     setWinnings(0);
@@ -181,10 +186,12 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
     newGrid[index] = { ...newGrid[index], revealed: true };
 
     if (newGrid[index].type === 'bomb') {
+      playSound('pop');
       setGameState('busted');
       const finalGrid = newGrid.map(item => ({ ...item, revealed: true }));
       setGrid(finalGrid);
     } else {
+      playSound('reveal');
       setGrid(newGrid);
     }
   };
@@ -304,8 +311,8 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
       </main>
 
       <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-        <div className="w-full max-w-xl mx-auto flex items-stretch justify-center gap-4">
-            <div className="flex-1 flex items-center justify-center gap-3">
+        <div className="w-full max-w-xl mx-auto flex flex-col md:flex-row items-stretch justify-center gap-4">
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-3">
                 {/* Bet Amount */}
                 <div className="w-48">
                     <label className="text-xs font-semibold text-gray-400 mb-1 block text-left ml-1">Bet</label>
@@ -328,7 +335,7 @@ const GemsGame: React.FC<GemsGameProps> = ({ onBack }) => {
                     <p className="text-center text-xs text-gray-500 mt-1">Initial multiplier ({(calculateMultiplier(remainingGems, bombCount, 0)).toFixed(2)}x)</p>
                 </div>
             </div>
-            <div className="w-48">
+            <div className="w-full md:w-48 h-14 md:h-auto">
                 {actionButton}
             </div>
         </div>

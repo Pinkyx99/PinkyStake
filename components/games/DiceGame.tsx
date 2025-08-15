@@ -12,6 +12,7 @@ import SwitchIcon from '../icons/SwitchIcon';
 import useAnimatedBalance from '../../hooks/useAnimatedBalance';
 import DiceRulesModal from './dice/DiceRulesModal';
 import { useUser } from '../../contexts/UserContext';
+import { useSound } from '../../hooks/useSound';
 
 const MIN_ROLL = 2;
 const MAX_ROLL = 98;
@@ -42,15 +43,16 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
   const lastInputSource = useRef<'roll' | 'multiplier' | 'chance' | null>(null);
   const isMounted = useRef(true);
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { playSound } = useSound();
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     isMounted.current = true;
     // Cleanup on unmount
     return () => {
       isMounted.current = false;
-      if (rollIntervalRef.current) {
-        clearInterval(rollIntervalRef.current);
-      }
+      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
+      if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
     };
   }, []);
 
@@ -140,6 +142,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
     if (!profile || betAmount > profile.balance || gamePhase !== 'betting') return;
 
     await adjustBalance(-betAmount);
+    playSound('bet');
 
     if (!isMounted.current) return;
     setGamePhase('rolling');
@@ -153,11 +156,13 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
       setLastRollResult(Math.random() * 101);
     }, 50);
 
+    tickIntervalRef.current = setInterval(() => playSound('tick'), 100);
+
     setTimeout(() => {
-      if (rollIntervalRef.current) {
-        clearInterval(rollIntervalRef.current);
-        rollIntervalRef.current = null;
-      }
+      if (rollIntervalRef.current) clearInterval(rollIntervalRef.current);
+      if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
+      rollIntervalRef.current = null;
+      tickIntervalRef.current = null;
 
       if (!isMounted.current) return;
 
@@ -166,11 +171,15 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
 
       const didWin = mode === 'over' ? finalRoll > rollValue : finalRoll < rollValue;
       setIsWin(didWin);
-
+      
       if (didWin) {
+        playSound('win');
         const winnings = betAmount * multiplier;
         adjustBalance(winnings);
+      } else {
+        playSound('lose');
       }
+
       setGamePhase('result');
 
       setTimeout(() => {
@@ -181,6 +190,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
 
   const handleToggleMode = () => {
     if (gamePhase !== 'betting') return;
+    playSound('click');
     const newMode = mode === 'over' ? 'under' : 'over';
     setMode(newMode);
     setRollValue(100 - rollValue);
@@ -269,7 +279,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
       </main>
 
       <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-        <div className="w-full max-w-xl mx-auto flex items-stretch justify-center gap-4">
+        <div className="w-full max-w-xl mx-auto flex flex-col md:flex-row items-stretch justify-center gap-4">
             {/* Bet Amount & Profit */}
             <div className="flex-grow bg-[#21243e] p-2 rounded-md flex justify-around items-center">
                 <div>
@@ -290,7 +300,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
             </div>
 
             {/* Bet Button */}
-            <div className="w-48">
+            <div className="w-full md:w-48 h-14 md:h-auto">
                 <button onClick={handleBet} disabled={gamePhase !== 'betting' || !profile || betAmount > profile.balance} className="w-full h-full text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
                     Bet
                 </button>

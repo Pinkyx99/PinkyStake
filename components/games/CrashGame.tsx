@@ -8,6 +8,7 @@ import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
+import { useSound } from '../../hooks/useSound';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -73,7 +74,7 @@ const BetPanel: React.FC<{
 
     const actionButton = () => {
         if (isRunningWithBet) {
-             return <button onClick={() => onCollect()} className="w-full h-full text-xl font-bold rounded-md bg-purple-500 hover:bg-purple-600 transition-colors text-white uppercase">Cashout</button>;
+             return <button onClick={onCollect} className="w-full h-full text-xl font-bold rounded-md bg-purple-500 hover:bg-purple-600 transition-colors text-white uppercase">Cashout</button>;
         }
         if (betState.isPlaced && isBettingPhase) {
              return <button onClick={onPlaceBet} className="w-full h-full text-xl font-bold rounded-md bg-red-500 hover:bg-red-600 transition-colors text-white uppercase">Cancel</button>;
@@ -124,21 +125,23 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const gameLoopRef = useRef<number | null>(null);
-    const startTimeRef = useRef<number>();
+    const startTimeRef = useRef<number | null>(null);
     const isMounted = useRef(true);
+    const { playSound } = useSound();
 
     useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
-    const handleCollect = useCallback(async (panel: 1 | 2, collectMultiplier: number) => {
+    const handleCollect = useCallback((panel: 1 | 2, collectMultiplier: number) => {
         const stateUpdater = panel === 1 ? setBet1 : setBet2;
         const betState = panel === 1 ? bet1Ref.current : bet2Ref.current;
         
         if (betState.isPlaced && !betState.hasCollected) {
+            playSound('cashout');
             stateUpdater(b => ({ ...b, hasCollected: true }));
             const winnings = betState.amount * collectMultiplier;
-            await adjustBalance(winnings);
+            adjustBalance(winnings);
         }
-    }, [adjustBalance]);
+    }, [adjustBalance, playSound]);
     
     useEffect(() => {
         let timerId: ReturnType<typeof setTimeout> | undefined;
@@ -167,6 +170,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const currentMultiplier = 1.00 * Math.pow(1.00025, elapsed); // Slower growth
 
                 if (currentMultiplier >= crashPoint) {
+                    playSound('lose');
                     setMultiplier(crashPoint);
                     if (isMounted.current) setPhase('crashed');
                     return;
@@ -210,19 +214,21 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             if (intervalId) clearInterval(intervalId);
             if (gameLoopRef.current) window.cancelAnimationFrame(gameLoopRef.current);
         };
-    }, [phase, handleCollect]);
+    }, [phase, handleCollect, playSound]);
 
 
-    const handlePlaceBet = async (panel: 1 | 2) => {
+    const handlePlaceBet = (panel: 1 | 2) => {
         const stateUpdater = panel === 1 ? setBet1 : setBet2;
         const betState = panel === 1 ? bet1 : bet2;
-
+        
         if (betState.isPlaced) { // Cancel
+            playSound('click');
             stateUpdater(s => ({...s, isPlaced: false}));
-            await adjustBalance(betState.amount);
+            adjustBalance(betState.amount);
         } else { // Place
             if (profile && profile.balance >= betState.amount) {
-                await adjustBalance(-betState.amount);
+                playSound('bet');
+                adjustBalance(-betState.amount);
                 stateUpdater(s => ({...s, isPlaced: true}));
             }
         }
@@ -297,7 +303,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       </header>
       
       <main className="flex-grow p-4 flex items-center justify-center">
-        <div className="w-full max-w-4xl aspect-[2/1] relative crash-graph-container rounded-lg p-4">
+        <div className="w-full max-w-4xl aspect-[16/10] md:aspect-[2/1] relative crash-graph-container rounded-lg p-4">
            {/* Multiplier Display */}
            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
               {phase === 'waiting' && <p className="text-2xl font-bold text-gray-400">Next round in {countdown.toFixed(0)}s</p>}
@@ -353,7 +359,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       </main>
 
       <footer className="shrink-0 bg-slate-800/30 p-4">
-        <div className="w-full max-w-4xl mx-auto flex gap-4">
+        <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
             <BetPanel betState={bet1} onBetStateChange={(s) => setBet1(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(1)} onCollect={() => handleCollect(1, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet1.amount} />
             <BetPanel betState={bet2} onBetStateChange={(s) => setBet2(b => ({ ...b, ...s }))} onPlaceBet={() => handlePlaceBet(2)} onCollect={() => handleCollect(2, multiplier)} gamePhase={phase} canBet={!!profile && profile.balance >= bet2.amount} />
         </div>

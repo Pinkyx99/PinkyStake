@@ -14,6 +14,7 @@ import DoubleIcon from '../icons/DoubleIcon';
 import CardComponent from './blackjack/Card';
 import { createDeck, shuffleDeck, getHandValue, type Card as CardType, getCardValue } from './blackjack/deck';
 import { useUser } from '../../contexts/UserContext';
+import { useSound } from '../../hooks/useSound';
 
 interface BlackjackGameProps {
   onBack: () => void;
@@ -43,6 +44,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
   const [timer, setTimer] = useState(0);
   const payoutProcessed = useRef(false);
   const isMounted = useRef(true);
+  const { playSound } = useSound();
 
   useEffect(() => {
     isMounted.current = true;
@@ -124,6 +126,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
   const handleBet = async () => {
     if (!profile || betAmount > profile.balance) return;
     payoutProcessed.current = false;
+    playSound('bet');
     
     await adjustBalance(-betAmount);
 
@@ -132,9 +135,15 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     setActiveHandIndex(0);
 
     const newDeck = shuffleDeck(createDeck());
+    
+    // Deal cards with a slight delay for sound
+    setTimeout(() => playSound('deal'), 100);
     const pCard1 = newDeck.pop();
-    const pCard2 = newDeck.pop();
+    setTimeout(() => playSound('deal'), 300);
     const dCard1 = newDeck.pop();
+    setTimeout(() => playSound('deal'), 500);
+    const pCard2 = newDeck.pop();
+    setTimeout(() => playSound('deal'), 700);
     const dCard2 = newDeck.pop();
 
     if (!pCard1 || !pCard2 || !dCard1 || !dCard2) {
@@ -167,6 +176,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     const currentHand = playerHands[activeHandIndex];
     if (!currentHand) return; // SAFETY CHECK
 
+    playSound('deal');
     const newDeck = [...deck];
     const newCard = newDeck.pop();
 
@@ -182,6 +192,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     
     const newScore = getHandValue(newHandCards);
     if (newScore > 21) {
+      playSound('lose');
       updatedHand.status = 'bust';
     } else if (newScore === 21) {
       updatedHand.status = 'stood';
@@ -196,6 +207,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     const currentHand = playerHands[activeHandIndex];
     if (!currentHand) return; // SAFETY CHECK
 
+    playSound('click');
     const newHands = [...playerHands];
     newHands[activeHandIndex].status = 'stood';
     setPlayerHands(newHands);
@@ -208,6 +220,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
 
     if (currentHand.cards.length !== 2 || profile.balance < currentHand.bet) return;
     
+    playSound('deal');
     await adjustBalance(-currentHand.bet);
     if (!isMounted.current) return;
     
@@ -228,6 +241,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     
     let doubledHand = { ...currentHand, cards: newHandCards, bet: currentHand.bet * 2, status: 'stood' as HandStatus };
     if (getHandValue(newHandCards) > 21) {
+        playSound('lose');
         doubledHand.status = 'bust';
     }
     newHands[activeHandIndex] = doubledHand;
@@ -243,6 +257,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     
     if (currentHand.cards.length !== 2 || getCardValue(currentHand.cards[0]) !== getCardValue(currentHand.cards[1]) || profile.balance < currentHand.bet) return;
     
+    playSound('deal');
     await adjustBalance(-currentHand.bet);
     if (!isMounted.current) return;
 
@@ -280,6 +295,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     }
     const drawTimer = setTimeout(() => {
       if (!isMounted.current) return;
+      playSound('deal');
       setDeck(currentDeck => {
         const newDeck = [...currentDeck];
         const cardToDraw = newDeck.pop();
@@ -292,7 +308,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
       });
     }, 800);
     return () => clearTimeout(drawTimer);
-  }, [gameState, dealerHand]);
+  }, [gameState, dealerHand, playSound]);
 
   const isFinished = gameState === 'finished';
 
@@ -349,31 +365,43 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
 
   useEffect(() => {
     const processPayout = async () => {
-        if (isFinished && totalPayout > 0 && !payoutProcessed.current) {
+        if (isFinished && !payoutProcessed.current) {
           payoutProcessed.current = true;
-          await adjustBalance(totalPayout);
+          if (totalPayout > 0) {
+            playSound('win');
+            await adjustBalance(totalPayout);
+          } else if (playerHands.every(h => h.status === 'bust') || finalHandsWithResult.every(h => h.result === 'Dealer Wins!')) {
+            // Only play lose sound if every hand lost and it wasn't a bust (already played).
+            // A check here avoids double 'lose' sounds.
+            if (!playerHands.some(h => h.status === 'bust')) {
+                 playSound('lose');
+            }
+          }
         }
     };
     processPayout();
-  }, [isFinished, totalPayout, adjustBalance]);
+  }, [isFinished, totalPayout, adjustBalance, playSound, playerHands, finalHandsWithResult]);
 
   const renderHand = (handCards: CardType[], isPlayer: boolean, isActive: boolean = false) => {
     const handLength = handCards.length;
+    const offset = window.innerWidth < 768 ? -32 : -56; // -2rem or -3.5rem
     return (
-      <div className={'relative h-44 flex items-center justify-center p-2 rounded-xl transition-all duration-300'} style={{ width: `${80 + handLength * 40}px`}}>
+      <div className={'relative h-32 md:h-44 flex items-center justify-center p-2 rounded-xl transition-all duration-300'}>
         {handCards.map((card, index) => (
-          <CardComponent
+          <div
             key={index}
-            card={card}
-            faceDown={!isPlayer && index === 1 && gameState === 'player_turn'}
+            className="transition-all duration-300 animate-deal-card"
             style={{
-              position: 'absolute',
-              left: `${index * 40}px`,
               transform: `rotate(${(index - (handLength - 1) / 2) * 8}deg)`,
-              transition: 'all 0.3s ease',
-              animationDelay: `${index * 100}ms`
+              zIndex: index,
+              marginLeft: index > 0 ? `${offset}px` : '0',
             }}
-          />
+          >
+            <CardComponent
+              card={card}
+              faceDown={!isPlayer && index === 1 && gameState === 'player_turn'}
+            />
+          </div>
         ))}
       </div>
     );
@@ -392,7 +420,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
       else if (isFinished && score === 21 && dealerHand.length === 2) color = 'bg-yellow-500';
       else color = 'bg-green-600';
     }
-    return <span className={`absolute -right-12 top-1/2 -translate-y-1/2 text-white text-sm font-bold px-3 py-1 rounded-md ${color}`}>{score}</span>
+    return <span className={`absolute -right-4 md:-right-12 top-1/2 -translate-y-1/2 text-white text-xs md:text-sm font-bold px-2 md:px-3 py-1 rounded-md ${color}`}>{score}</span>
   }
   
   const isBettingPhase = gameState === 'betting' || gameState === 'finished';
@@ -469,7 +497,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
             )}
         </div>
         
-        <div className="flex items-start justify-center gap-4 min-h-[192px]">
+        <div className="flex items-start justify-center gap-4 min-h-[128px] md:min-h-[192px]">
             {playerHands.map((hand, index) => (
                 <div key={index} className={`relative p-2 rounded-xl transition-all duration-300 ${index === activeHandIndex && gameState === 'player_turn' ? 'bg-white/10 ring-2 ring-purple-400' : ''}`}>
                     {renderHand(hand.cards, true, index === activeHandIndex && gameState === 'player_turn')}
@@ -480,7 +508,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
       </main>
 
       <footer className="bg-[#1a1b2f] py-3 px-4 border-t border-gray-700/50">
-        <div className="w-full max-w-2xl mx-auto flex items-stretch justify-center gap-4">
+        <div className="w-full max-w-2xl mx-auto flex flex-col md:flex-row items-stretch justify-center gap-4">
             <div className="bg-[#21243e] p-3 rounded-lg flex flex-col gap-3">
                 <div>
                     <label className="text-xs font-semibold text-gray-400 mb-1 block">Bet</label>
@@ -512,7 +540,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
                 </div>
             </div>
 
-            <div className="w-48">
+            <div className="w-full md:w-48 h-14 md:h-auto">
                 <button
                     onClick={handleBet}
                     disabled={!profile || profile.balance < betAmount || !isBettingPhase}

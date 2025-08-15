@@ -12,6 +12,7 @@ import ChevronLeftIcon from '../icons/ChevronLeftIcon';
 import ChevronRightIcon from '../icons/ChevronRightIcon';
 import KenoRulesModal from './keno/KenoRulesModal';
 import { PAYOUTS, type RiskLevel } from './keno/payouts';
+import { useSound } from '../../hooks/useSound';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -38,6 +39,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const isMounted = useRef(true);
+    const { playSound } = useSound();
 
     useEffect(() => {
         isMounted.current = true;
@@ -61,6 +63,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const handleNumberToggle = (num: number) => {
         if (gamePhase !== 'betting') return;
+        playSound('click');
         const newSelection = new Set(selectedNumbers);
         if (newSelection.has(num)) {
             newSelection.delete(num);
@@ -74,6 +77,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const handleAutoPick = () => {
         if (gamePhase !== 'betting') return;
+        playSound('click');
         const availableNumbers = Array.from({ length: NUMBERS_COUNT }, (_, i) => i + 1);
         const newSelection = new Set<number>();
         while (newSelection.size < MAX_SELECTION && availableNumbers.length > 0) {
@@ -85,11 +89,13 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const handleClear = () => {
         if (gamePhase !== 'betting') return;
+        playSound('click');
         setSelectedNumbers(new Set());
     };
 
     const handleRiskChange = (direction: 'next' | 'prev') => {
         if (gamePhase !== 'betting') return;
+        playSound('click');
         const currentIndex = RISK_LEVELS.indexOf(riskLevel);
         const nextIndex = direction === 'next'
             ? (currentIndex + 1) % RISK_LEVELS.length
@@ -100,6 +106,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const handleBet = async () => {
         if (!profile || gamePhase !== 'betting' || selectedNumbers.size === 0 || betAmount > profile.balance) return;
 
+        playSound('bet');
         await adjustBalance(-betAmount);
         if (!isMounted.current) return;
 
@@ -118,6 +125,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         for (const [index, num] of numbersToDraw.entries()) {
             await new Promise(resolve => setTimeout(resolve, 200));
             if (!isMounted.current) return;
+            playSound('tick');
             setDrawnNumbers(prev => new Set(prev).add(num));
 
             if (index === DRAW_COUNT - 1) {
@@ -132,6 +140,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const finalWinnings = betAmount * multiplier;
                 
                 if (finalWinnings > 0) {
+                    playSound('win');
                     await adjustBalance(finalWinnings);
                 }
                 
@@ -194,13 +203,13 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             <main className="flex-grow p-4 flex flex-col items-center justify-center gap-4">
                 <div className="w-full max-w-2xl">
-                    <div className="grid grid-cols-10 gap-2">
+                    <div className="grid grid-cols-10 gap-1 md:gap-2">
                         {Array.from({ length: NUMBERS_COUNT }, (_, i) => i + 1).map(num => (
                             <button
                                 key={num}
                                 onClick={() => handleNumberToggle(num)}
                                 disabled={gamePhase !== 'betting'}
-                                className={`aspect-square rounded-md flex items-center justify-center font-bold text-lg transition-all duration-200 ${getNumberClass(num)}`}
+                                className={`aspect-square rounded-md flex items-center justify-center font-bold text-sm md:text-lg transition-all duration-200 ${getNumberClass(num)}`}
                             >
                                 {num}
                             </button>
@@ -213,11 +222,11 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     </div>
 
                     <div className="mt-4 min-h-[70px]">
-                         <div className="flex justify-center items-center gap-2 flex-wrap">
+                         <div className="flex justify-center items-center gap-1 md:gap-2 flex-wrap">
                             {getPayoutTable.map(({ hits, multi }) => (
-                                <div key={hits} className="bg-slate-800/60 p-2 rounded-md text-center">
+                                <div key={hits} className="bg-slate-800/60 p-1 md:p-2 rounded-md text-center">
                                     <p className="text-xs text-gray-400">{hits} Hits</p>
-                                    <p className={`font-bold ${multi > 0 ? 'text-green-400' : 'text-gray-500'}`}>{multi.toFixed(2)}x</p>
+                                    <p className={`font-bold text-sm md:text-base ${multi > 0 ? 'text-green-400' : 'text-gray-500'}`}>{multi.toFixed(2)}x</p>
                                 </div>
                             ))}
                         </div>
@@ -227,8 +236,8 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </main>
 
             <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-                <div className="w-full max-w-3xl mx-auto flex items-stretch justify-between gap-4">
-                     <div className="flex items-center gap-4">
+                <div className="w-full max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-stretch justify-between gap-4">
+                     <div className="flex flex-col sm:flex-row items-center gap-4">
                         <div>
                             <label className="text-xs font-semibold text-gray-400 mb-1 block">Bet</label>
                             <div className="flex items-center bg-[#2f324d] rounded-md p-1">
@@ -247,7 +256,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             </div>
                         </div>
                     </div>
-                    <div className="w-56">
+                    <div className="w-full md:w-56 h-14 md:h-auto">
                         <button
                             onClick={handleBet}
                             disabled={gamePhase !== 'betting' || selectedNumbers.size === 0 || !profile || betAmount > profile.balance}

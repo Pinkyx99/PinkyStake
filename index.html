@@ -296,37 +296,37 @@
         }
       }
       
-      /* -- Roulette Animations V10 (Corrected Settle) -- */
+      /* -- Roulette Animations V12 (Continuity Fix) -- */
       @keyframes roulette-wheel-spin-final {
-        from { transform: rotate(0deg); }
+        from { transform: rotate(var(--wheel-start-angle, 0deg)); }
         to { transform: rotate(var(--wheel-final-angle)); }
       }
 
       @keyframes roulette-ball-orbit-and-fade {
-        from { transform: rotate(0deg); opacity: 1; }
+        from { transform: rotate(var(--ball-orbit-start-angle, 0deg)); opacity: 1; }
         95% { opacity: 1; }
         to { transform: rotate(var(--ball-orbit-angle)); opacity: 0; }
       }
       
-      /* This animation makes the ball land *inside* the pocket with a bounce */
+      /* This animation makes the ball land *inside* the pocket at the TOP with a bounce */
       @keyframes roulette-ball-settle-in-pocket {
         0% {
           opacity: 0;
-          transform: translateY(20px) scale(1.2); /* Start from slightly above the wheel surface, invisible */
+          transform: translateY(-20px) scale(1.2); /* Start from above, invisible */
         }
         30% {
           opacity: 1;
-          transform: translateY(46px) scale(0.9); /* Land in pocket and squash */
+          transform: translateY(-160px) scale(0.9); /* Land in pocket */
         }
         50% {
-          transform: translateY(40px) scale(1.05); /* Bounce up slightly */
+          transform: translateY(-155px) scale(1.05); /* Bounce up slightly */
         }
         70% {
-          transform: translateY(46px) scale(0.98); /* Settle back down */
+          transform: translateY(-160px) scale(0.98); /* Settle back down */
         }
         100% {
           opacity: 1;
-          transform: translateY(46px) scale(1); /* Final resting state inside the pocket */
+          transform: translateY(-158px) scale(1); /* Final resting state */
         }
       }
       
@@ -391,6 +391,103 @@
       input:checked + .slider:before {
         transform: translateX(20px);
       }
+
+      /* -- PUMP GAME V2 -- */
+      @keyframes pump-explode-effect {
+        0% { transform: scale(0.5); opacity: 0.8; }
+        100% { transform: scale(2.5); opacity: 0; }
+      }
+      .animate-pump-explode {
+        animation: pump-explode-effect 0.4s cubic-bezier(0.78, 0.01, 0.3, 0.99) forwards;
+      }
+
+      @keyframes pump-pop-text {
+        0% { transform: scale(0.8); opacity: 1; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      .animate-pump-pop-text {
+        animation: pump-pop-text 0.4s ease-out forwards;
+      }
+
+      @keyframes balloon-pulse-glow {
+        0%, 100% { filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4)); }
+        50% { filter: drop-shadow(0 0 25px rgba(239, 68, 68, 0.7)); }
+      }
+      .animate-balloon-pulse {
+          animation: balloon-pulse-glow 2.5s ease-in-out infinite;
+      }
+
+      /* -- FLIP GAME V2 -- */
+      .flip-coin-container {
+        perspective: 1500px;
+      }
+      .flip-coin-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        transition: transform 1s cubic-bezier(0.6, -0.3, 0.4, 1.3);
+      }
+      .coin-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        overflow: hidden;
+      }
+      .coin-face.back {
+        transform: rotateY(180deg);
+      }
+      .coin-rim {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(#71717a, #e4e4e7, #a1a1aa, #d4d4d8, #52525b, #a1a1aa, #e4e4e7, #71717a);
+      }
+      .coin-surface {
+         position: absolute;
+         inset: 12px;
+         border-radius: 50%;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+      }
+      .coin-shine {
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%);
+        transform: rotate(45deg);
+      }
+
+      /* -- Mobile Responsiveness -- */
+      @media (max-width: 768px) {
+        .doors-scroll-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none; /* Firefox */
+        }
+        .doors-scroll-wrapper::-webkit-scrollbar {
+          display: none; /* Safari and Chrome */
+        }
+         .doors-camera-container {
+          perspective: 1200px;
+        }
+        .door-container {
+          width: 120px;
+          height: 190px;
+        }
+        .doors-grid {
+          gap: 1rem;
+          padding: 0 1rem;
+        }
+      }
     </style>
   <script type="importmap">
 {
@@ -398,8 +495,7 @@
     "react": "https://esm.sh/react@18.3.1",
     "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
     "react-dom/": "https://esm.sh/react-dom@18.3.1/",
-    "react/": "https://esm.sh/react@18.3.1/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.44.4"
+    "react/": "https://esm.sh/react@18.3.1/"
   }
 }
 </script>

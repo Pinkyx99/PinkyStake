@@ -1,8 +1,7 @@
-
 import React from 'react';
 
-const MinesTileIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <img src="https://i.imgur.com/8cbSbnG.png" alt="Tile" className={className} />
-);
+const MinesTileIcon: React.FC<React.SVGProps<SVGSVGElement>> = () => {
+  return null;
+};
 
 export default MinesTileIcon;

@@ -20,8 +20,6 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
 
     const imageX = (centerX - x) / 20;
     const imageY = (y - centerY) / 20;
-    const titleX = (centerX - x) / 15;
-    const titleY = (y - centerY) / 15;
 
     card.style.setProperty('--rotate-x', `${-rotateX}deg`);
     card.style.setProperty('--rotate-y', `${rotateY}deg`);
@@ -31,8 +29,6 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
     
     card.style.setProperty('--image-x', `${imageX}px`);
     card.style.setProperty('--image-y', `${imageY}px`);
-    card.style.setProperty('--title-x', `${titleX}px`);
-    card.style.setProperty('--title-y', `${titleY}px`);
   }, []);
 
   const onMouseEnter = useCallback(() => {
@@ -53,8 +49,6 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
     card.style.setProperty('--shine-opacity', '0');
     card.style.setProperty('--image-x', '0px');
     card.style.setProperty('--image-y', '0px');
-    card.style.setProperty('--title-x', '0px');
-    card.style.setProperty('--title-y', '0px');
   }, []);
 
   return (
@@ -65,7 +59,7 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
       onMouseLeave={onMouseLeave}
       onClick={onSelect}
       style={{ perspective: '1500px' }}
-      aria-label={`Play ${game.title || 'Chicken'}`}
+      aria-label={`Play ${game.title || 'game'}`}
     >
       <div
         ref={cardRef}
@@ -74,7 +68,7 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
         <div className="absolute inset-0 w-full h-full card-image-wrapper">
            <img
             src={game.imageUrl}
-            alt={game.title || 'Chicken Game'}
+            alt={game.title || 'Game image'}
             className="absolute inset-0 w-full h-full object-cover"
             width="300"
             height="375"
@@ -83,13 +77,6 @@ const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSel
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10"></div>
         <div className="card-shine z-20" />
         <div className="absolute inset-0 rounded-2xl z-10" style={{ boxShadow: 'inset 0px 0px 0px 2px rgba(255,255,255,0.08)' }}></div>
-        <div className="absolute bottom-4 left-0 right-0 text-center z-30 card-title-wrapper">
-          {game.title && (
-            <h3 className="font-bebas text-white text-3xl md:text-4xl font-black uppercase tracking-widest" style={{ textShadow: '0 2px 15px rgba(0,0,0,0.8), 0 0 10px rgba(168, 85, 247, 0.7)' }}>
-              {game.title}
-            </h3>
-          )}
-        </div>
       </div>
     </div>
   );

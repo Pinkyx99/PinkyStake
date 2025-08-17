@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -13,6 +14,7 @@ import DoorComponent from './doors/Door';
 import GameRulesModal from './doors/GameRulesModal';
 import { useUser } from '../../contexts/UserContext';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const INITIAL_DOOR_COUNT = 10;
 const MIN_BET = 0.20;
@@ -68,6 +70,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const [selectedDoor, setSelectedDoor] = useState<SelectedDoorInfo | null>(null);
   const [doorAnimationState, setDoorAnimationState] = useState<'swing' | 'thud' | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
   
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -173,6 +176,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
     if (gamePhase !== 'playing' || level === 0) return;
     
     playSound('cashout');
+    setWinData({ amount: winnings, key: Date.now() });
     await adjustBalance(winnings);
     if (!isMounted.current) return;
     setGamePhase('cashed_out');
@@ -189,7 +193,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
         }
         if (gamePhase === 'reveal_action' && selectedDoor) {
           if (selectedDoor.door.type === 'safe') {
-              playSound('reveal');
+              playSound('doors_win');
           } else {
               playSound('pop');
           }
@@ -210,7 +214,8 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
                 const finalWinnings = Math.min(newWinnings, MAX_PROFIT);
                 setWinnings(finalWinnings);
                 setLevel(newLevel);
-                playSound('win');
+                playSound('cashout');
+                setWinData({ amount: finalWinnings, key: Date.now() });
                 await adjustBalance(finalWinnings);
                 if (!isMounted.current) return;
                 setGamePhase('cashed_out');
@@ -310,13 +315,14 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   
   return (
     <div className="h-screen w-screen flex flex-col font-poppins text-white select-none overflow-hidden bg-gradient-to-br from-[#1a1d3a] via-[#1e152f] to-[#0f1124]">
+        {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
         <header className="relative z-30 flex items-center justify-between p-3 bg-black/20 backdrop-blur-sm shrink-0">
-            <div className="flex items-center gap-4">
+            <div className="flex-1 flex items-center gap-4">
                 <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-black/20"><ArrowLeftIcon className="w-6 h-6" /></button>
                 <h1 className="text-red-500 text-2xl font-bold uppercase">Doors</h1>
             </div>
-            <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5"><span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span></div>
-            <div className="flex items-center space-x-4"><button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button><button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button></div>
+            <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5"><span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span></div>
+            <div className="flex-1 flex justify-end items-center space-x-4"><button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button><button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button></div>
         </header>
         
         <div className={`doors-camera-container ${gamePhase === 'reveal_action' && selectedDoor?.door.type === 'locked' ? 'animate-screen-shake-subtle' : ''}`}>

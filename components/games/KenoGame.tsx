@@ -13,6 +13,7 @@ import ChevronRightIcon from '../icons/ChevronRightIcon';
 import KenoRulesModal from './keno/KenoRulesModal';
 import { PAYOUTS, type RiskLevel } from './keno/payouts';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -20,7 +21,7 @@ const MAX_PROFIT = 10000.00;
 const NUMBERS_COUNT = 40;
 const DRAW_COUNT = 10;
 const MAX_SELECTION = 10;
-const RISK_LEVELS: RiskLevel[] = ['Low', 'Classic', 'Medium', 'High'];
+const RISK_LEVELS: RiskLevel[] = ['Low', 'Medium', 'High'];
 
 type GamePhase = 'betting' | 'drawing' | 'result';
 
@@ -29,13 +30,14 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [selectedNumbers, setSelectedNumbers] = useState<Set<number>>(new Set());
-    const [riskLevel, setRiskLevel] = useState<RiskLevel>('Classic');
+    const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
     const [gamePhase, setGamePhase] = useState<GamePhase>('betting');
     const [drawnNumbers, setDrawnNumbers] = useState<Set<number>>(new Set());
     const [hits, setHits] = useState<Set<number>>(new Set());
     const [winnings, setWinnings] = useState<number | null>(null);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [timer, setTimer] = useState(0);
+    const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const isMounted = useRef(true);
@@ -140,8 +142,14 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const finalWinnings = betAmount * multiplier;
                 
                 if (finalWinnings > 0) {
+                    const netWinnings = finalWinnings - betAmount;
+                    if(netWinnings > 0) {
+                      setWinData({ amount: netWinnings, key: Date.now() });
+                    }
                     playSound('win');
                     await adjustBalance(finalWinnings);
+                } else {
+                    playSound('lose');
                 }
                 
                 if (!isMounted.current) return;
@@ -165,7 +173,7 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         const table = PAYOUTS[riskLevel][picksCount] || {};
         return Object.entries(table)
             .map(([hits, multi]) => ({ hits: parseInt(hits), multi }))
-            .filter(item => item.multi >= 0) // Show 0x multipliers too
+            .filter(item => item.multi > 0) 
             .sort((a, b) => a.hits - b.hits);
     }, [selectedNumbers.size, riskLevel]);
     
@@ -182,19 +190,17 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     return (
         <div className="bg-[#0f1124] h-screen flex flex-col font-poppins text-white select-none">
+            {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
             <header className="flex items-center justify-between p-3 bg-[#1a1b2f] shrink-0">
-                <div className="flex items-center gap-4">
+                <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games"><ArrowLeftIcon className="w-6 h-6" /></button>
                     <h1 className="text-xl font-bold uppercase text-blue-400">Keno</h1>
-                     <div className="text-xs text-gray-400 font-semibold hidden md:flex gap-4">
-                        <span>Min Bet: {MIN_BET.toFixed(2)} EUR</span> / <span>Max Bet: {MAX_BET.toFixed(2)} EUR</span> / <span>Max Profit: {MAX_PROFIT.toFixed(2)} EUR</span>
-                    </div>
                 </div>
-                <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5">
+                <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
                     <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
                     <span className="text-sm text-gray-400 ml-2">EUR</span>
                 </div>
-                <div className="flex items-center space-x-3 text-sm">
+                <div className="flex-1 flex justify-end items-center space-x-3 text-sm">
                     <span className="font-mono text-gray-400">{`00:00:${timer.toString().padStart(2, '0')}`}</span>
                     <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
                     <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>

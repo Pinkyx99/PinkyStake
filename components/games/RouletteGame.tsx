@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
@@ -11,6 +12,7 @@ import useAnimatedBalance from '../../hooks/useAnimatedBalance';
 import { useUser } from '../../contexts/UserContext';
 import RouletteRulesModal from './roulette/RouletteRulesModal';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -83,6 +85,7 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [gamePhase, setGamePhase] = useState<GamePhase>('betting');
     const [winningNumber, setWinningNumber] = useState<number | null>(null);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+    const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
     
     const [wheelRotation, setWheelRotation] = useState(0);
     const [ballOrbitRotation, setBallOrbitRotation] = useState(0);
@@ -91,7 +94,7 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const isMounted = useRef(true);
-    const soundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const soundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound } = useSound();
 
     useEffect(() => {
@@ -191,7 +194,9 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             }
 
             if (totalWinnings > 0) {
-                playSound('win');
+                const netWinnings = totalWinnings - totalBet;
+                setWinData({ amount: netWinnings, key: Date.now() });
+                playSound('roulette_win');
                 await adjustBalance(totalWinnings);
             } else {
                 playSound('lose');
@@ -222,13 +227,14 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     
     return (
         <div className="bg-gray-900 h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
+            {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
             <header className="flex items-center justify-between p-3 bg-gray-800/50 shrink-0">
-                <div className="flex items-center gap-4">
+                <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack}><ArrowLeftIcon className="w-6 h-6" /></button>
                     <h1 className="text-xl font-bold uppercase text-red-500">Roulette</h1>
                 </div>
-                <div className="bg-black/30 rounded-md px-4 py-1.5"><span className="text-base font-bold">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span></div>
-                <div className="flex items-center space-x-3 text-sm"><button onClick={() => setIsRulesModalOpen(true)}><GameRulesIcon className="w-5 h-5"/></button></div>
+                <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5"><span className="text-base font-bold">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span></div>
+                <div className="flex-1 flex justify-end items-center space-x-3 text-sm"><button onClick={() => setIsRulesModalOpen(true)}><GameRulesIcon className="w-5 h-5"/></button></div>
             </header>
 
             <main className="flex-grow p-4 flex flex-col items-center justify-center gap-4">
@@ -306,10 +312,10 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </main>
 
             <footer className="shrink-0 bg-gray-800/50 p-2">
-                <div className="w-full max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div className="w-full max-w-4xl mx-auto flex items-center justify-between roulette-footer">
+                    <div className="flex items-center gap-2 roulette-chips">
                         {CHIP_DATA.map(({value, imageUrl}) => (
-                            <button key={value} onClick={() => setSelectedChip(value)} className={`w-12 h-12 rounded-full transition-all ${selectedChip === value ? 'ring-4 ring-yellow-400 scale-110' : ''}`}>
+                            <button key={value} onClick={() => setSelectedChip(value)} className={`w-12 h-12 rounded-full transition-all shrink-0 ${selectedChip === value ? 'ring-4 ring-yellow-400 scale-110' : ''}`}>
                                 <img src={imageUrl} alt={`${value} chip`} className="w-full h-full"/>
                             </button>
                         ))}
@@ -318,11 +324,11 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <p className="text-xs text-gray-400">Total Bet</p>
                         <p className="font-bold text-lg">{totalBet.toFixed(2)} EUR</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 roulette-actions">
                         <button onClick={handleUndo} className="p-3 bg-gray-700 rounded-md"><UndoIcon className="w-6 h-6"/></button>
                         <button onClick={handleClear} className="p-3 bg-gray-700 rounded-md"><ClearIcon className="w-6 h-6"/></button>
                         <button onClick={handleRebet} className="p-3 bg-gray-700 rounded-md"><RebetIcon className="w-6 h-6"/></button>
-                        <button onClick={handleSpin} disabled={gamePhase !== 'betting' || totalBet === 0} className="px-12 py-3 text-xl font-bold rounded-md bg-green-500 hover:bg-green-600 disabled:bg-gray-600">SPIN</button>
+                        <button onClick={handleSpin} disabled={gamePhase !== 'betting' || totalBet === 0} className="px-12 py-3 text-xl font-bold rounded-md bg-green-500 hover:bg-green-600 disabled:bg-gray-600 spin-btn">SPIN</button>
                     </div>
                 </div>
             </footer>

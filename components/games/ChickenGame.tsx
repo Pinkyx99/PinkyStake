@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -14,6 +15,7 @@ import ChickenIcon from '../icons/ChickenIcon';
 import BoneIcon from '../icons/BoneIcon';
 import { useUser } from '../../contexts/UserContext';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const GRID_SIZE = 25;
 const MIN_BET = 0.20;
@@ -48,7 +50,8 @@ const ChickenGame: React.FC<ChickenGameProps> = ({ onBack }) => {
   const [winnings, setWinnings] = useState(0);
   const [nextWin, setNextWin] = useState(0);
   const [timer, setTimer] = useState(0);
-  
+  const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
+
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const isMounted = useRef(true);
   const { playSound } = useSound();
@@ -164,6 +167,7 @@ const ChickenGame: React.FC<ChickenGameProps> = ({ onBack }) => {
     if (!isGameInProgress || revealedChickens === 0) return;
     
     playSound('cashout');
+    setWinData({ amount: winnings, key: Date.now() });
     await adjustBalance(winnings);
     
     if (!isMounted.current) return;
@@ -238,32 +242,24 @@ const ChickenGame: React.FC<ChickenGameProps> = ({ onBack }) => {
 
   return (
     <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white select-none">
-      <div className="w-full shrink-0">
-        <div className="flex justify-center items-center py-2 bg-[#0f1124]">
-            <div className="flex items-center bg-black/30 rounded-md px-4 py-1">
-                <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
-                <span className="text-sm text-gray-400 ml-2">EUR</span>
-            </div>
-        </div>
-        <div className="flex items-center justify-between px-3 py-1 bg-[#1a1b2f]">
-            <div className="flex items-center gap-4">
-                <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <h1 className="text-red-500 text-xl font-bold uppercase">Chicken</h1>
-                <div className="text-xs text-gray-400 font-semibold hidden md:flex gap-4">
-                    <span>Min Bet: {MIN_BET.toFixed(2)} EUR</span>
-                    <span>Max Bet: {MAX_BET.toFixed(2)} EUR</span>
-                    <span>Max Profit: 10000.00 EUR</span>
-                </div>
-            </div>
-            <div className="flex items-center space-x-3 text-sm">
-                <span className="font-mono text-gray-400">{formatTime(timer)}</span>
-                <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
-                <button className="text-gray-400 hover:text-white flex items-center gap-1"><GameRulesIcon className="w-5 h-5"/> Game Rules</button>
-            </div>
-        </div>
-      </div>
+       {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
+      <header className="shrink-0 w-full bg-[#1a1b2f] p-3 flex items-center justify-between z-10">
+          <div className="flex items-center gap-4">
+              <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
+                  <ArrowLeftIcon className="w-6 h-6" />
+              </button>
+              <h1 className="text-red-500 text-xl font-bold uppercase">Chicken</h1>
+          </div>
+          <div className="flex items-center bg-black/30 rounded-md px-4 py-1">
+              <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
+              <span className="text-sm text-gray-400 ml-2">EUR</span>
+          </div>
+          <div className="flex items-center space-x-3 text-sm">
+              <span className="font-mono text-gray-400">{formatTime(timer)}</span>
+              <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
+              <button className="text-gray-400 hover:text-white flex items-center gap-1"><GameRulesIcon className="w-5 h-5"/> Game Rules</button>
+          </div>
+      </header>
       
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-xl">

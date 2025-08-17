@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SoundOnIcon from '../icons/SoundOnIcon';
@@ -15,6 +16,7 @@ import CardComponent from './blackjack/Card';
 import { createDeck, shuffleDeck, getHandValue, type Card as CardType, getCardValue } from './blackjack/deck';
 import { useUser } from '../../contexts/UserContext';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 interface BlackjackGameProps {
   onBack: () => void;
@@ -42,6 +44,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
   const [dealerHand, setDealerHand] = useState<CardType[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
   const [timer, setTimer] = useState(0);
+  const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
   const payoutProcessed = useRef(false);
   const isMounted = useRef(true);
   const { playSound } = useSound();
@@ -323,41 +326,46 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     const handsWithResult = playerHands.map(hand => {
       let resultText = '';
       let handPayout = 0;
+      let resultType: 'win' | 'loss' | 'push' = 'loss';
       
       switch (hand.status) {
         case 'bust':
           resultText = 'Bust!';
-          // Payout is 0, so no change
+          resultType = 'loss';
           break;
         case 'blackjack':
           if (dScore === 21 && dealerHand.length === 2) {
             resultText = 'Push';
             handPayout = hand.bet;
+            resultType = 'push';
           } else {
             resultText = 'Blackjack!';
-            handPayout = hand.bet * 2.5; // Bet back + 1.5x winnings
+            handPayout = hand.bet * 2.5;
+            resultType = 'win';
           }
           break;
         case 'stood':
           const pScore = getHandValue(hand.cards);
           if (dScore > 21 || pScore > dScore) {
             resultText = 'Player Wins!';
-            handPayout = hand.bet * 2; // Bet back + 1x winnings
+            handPayout = hand.bet * 2;
+            resultType = 'win';
           } else if (dScore > pScore) {
             resultText = 'Dealer Wins!';
-            // Payout is 0
+            resultType = 'loss';
           } else {
             resultText = 'Push';
-            handPayout = hand.bet; // Bet back
+            handPayout = hand.bet;
+            resultType = 'push';
           }
           break;
         default:
           resultText = 'Error';
-          handPayout = 0;
+          resultType = 'loss';
       }
       
       totalPayoutCalc += handPayout;
-      return { ...hand, result: resultText };
+      return { ...hand, result: resultText, resultType };
     });
 
     return { finalHandsWithResult: handsWithResult, totalPayout: totalPayoutCalc };
@@ -368,7 +376,11 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
         if (isFinished && !payoutProcessed.current) {
           payoutProcessed.current = true;
           if (totalPayout > 0) {
-            playSound('win');
+            const netWinnings = totalPayout - playerHands.reduce((acc, h) => acc + h.bet, 0);
+            if (netWinnings > 0) {
+                setWinData({ amount: netWinnings, key: Date.now() });
+            }
+            playSound('blackjack_win');
             await adjustBalance(totalPayout);
           } else if (playerHands.every(h => h.status === 'bust') || finalHandsWithResult.every(h => h.result === 'Dealer Wins!')) {
             // Only play lose sound if every hand lost and it wasn't a bust (already played).
@@ -453,23 +465,19 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
   
   return (
     <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white select-none">
+       {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
       <header className="flex items-center justify-between p-3 bg-[#1a1b2f] border-b border-gray-700/50">
-        <div className="flex items-center gap-4">
+        <div className="flex-1 flex items-center gap-4">
            <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
             <ArrowLeftIcon className="w-6 h-6" />
           </button>
           <h1 className="text-red-500 text-2xl font-bold uppercase">Blackjack</h1>
-          <div className="text-xs text-gray-400 font-semibold hidden md:block">
-            <p>Min Bet: {MIN_BET.toFixed(2)} EUR</p>
-            <p>Max Bet: {MAX_BET.toFixed(2)} EUR</p>
-            <p>Max Profit: 10000.00 EUR</p>
-          </div>
         </div>
-        <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5">
+        <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
           <span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span>
           <span className="text-sm text-gray-400 ml-2">EUR</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex-1 flex items-center justify-end space-x-4">
           <span className="text-sm font-mono">{formatTime(timer)}</span>
           <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
           <button className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
@@ -498,12 +506,19 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
         </div>
         
         <div className="flex items-start justify-center gap-4 min-h-[128px] md:min-h-[192px]">
-            {playerHands.map((hand, index) => (
-                <div key={index} className={`relative p-2 rounded-xl transition-all duration-300 ${index === activeHandIndex && gameState === 'player_turn' ? 'bg-white/10 ring-2 ring-purple-400' : ''}`}>
-                    {renderHand(hand.cards, true, index === activeHandIndex && gameState === 'player_turn')}
-                    {renderScore(getHandValue(hand.cards), hand.cards.length > 0, hand)}
-                </div>
-            ))}
+            {playerHands.map((hand, index) => {
+                const handResult = isFinished ? finalHandsWithResult.find((h, i) => i === index)?.resultType : null;
+                const handGlowClass = 
+                  handResult === 'win' ? 'shadow-[0_0_20px_theme(colors.green.500)]' : 
+                  handResult === 'loss' ? 'shadow-[0_0_20px_theme(colors.red.500)]' : '';
+
+                return (
+                  <div key={index} className={`relative p-2 rounded-xl transition-all duration-300 ${index === activeHandIndex && gameState === 'player_turn' ? 'bg-white/10 ring-2 ring-purple-400' : ''} ${handGlowClass}`}>
+                      {renderHand(hand.cards, true, index === activeHandIndex && gameState === 'player_turn')}
+                      {renderScore(getHandValue(hand.cards), hand.cards.length > 0, hand)}
+                  </div>
+                )
+            })}
         </div>
       </main>
 
@@ -521,19 +536,19 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
                 </div>
                 
                 <div className="grid grid-cols-4 gap-2">
-                    <button onClick={handleHit} disabled={isPlayerActionsDisabled} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
+                    <button onClick={handleHit} disabled={isPlayerActionsDisabled} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
                         <HitIcon className="w-6 h-6" />
                         <span className="text-xs font-bold mt-1.5">Hit</span>
                     </button>
-                    <button onClick={handleStand} disabled={isPlayerActionsDisabled} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
+                    <button onClick={handleStand} disabled={isPlayerActionsDisabled} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
                         <StandIcon className="w-6 h-6" />
                         <span className="text-xs font-bold mt-1.5">Stand</span>
                     </button>
-                    <button onClick={handleSplit} disabled={!canSplit} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
+                    <button onClick={handleSplit} disabled={!canSplit} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
                         <SplitIcon className="w-6 h-6" />
                         <span className="text-xs font-bold mt-1.5">Split</span>
                     </button>
-                    <button onClick={handleDouble} disabled={!canDouble} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
+                    <button onClick={handleDouble} disabled={!canDouble} className="flex flex-col items-center justify-center h-20 bg-[#2f324d] rounded-md text-gray-400 hover:text-white hover:bg-[#404566] transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2f324d] p-1">
                         <DoubleIcon className="w-6 h-6" />
                         <span className="text-xs font-bold mt-1.5">Double</span>
                     </button>

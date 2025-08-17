@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import BrickWallIcon from '../../icons/BrickWallIcon';
 import TreasureChestIcon from '../../icons/TreasureChestIcon';
@@ -23,6 +24,7 @@ const DoorComponent = React.forwardRef<HTMLDivElement, DoorComponentProps>(({ is
     // Keep revealed doors visible but static after the round ends
     return (
        <div className="door-container opacity-50">
+           {isSafe && <div className="portal-glow-effect" />}
             <div className="door-leaf" style={{transform: `rotateY(${isSafe ? -160 : 0}deg)`}}>
                  <div className="door-front-face bg-[#4a3f70] border-2 border-[#2a2341] p-2 shadow-lg overflow-hidden">
                     <div className="relative w-full h-full rounded-md bg-gradient-to-b from-[#3a3153] to-[#2c2541] flex items-center justify-center">
@@ -54,6 +56,7 @@ const DoorComponent = React.forwardRef<HTMLDivElement, DoorComponentProps>(({ is
       onClick={isClickable && !animationState ? onClick : undefined}
       aria-hidden={!isClickable || !!animationState}
     >
+      {isSafe && animationState === 'swing' && <div className="portal-glow-effect" />}
       <div className={`door-leaf ${getAnimationClass()}`}>
         {/* Front of the door */}
         <div className="door-front-face bg-[#4a3f70] border-2 border-[#2a2341] p-2 shadow-lg overflow-hidden">
@@ -78,7 +81,7 @@ const DoorComponent = React.forwardRef<HTMLDivElement, DoorComponentProps>(({ is
       </div>
       
       {/* Wall behind the door (only rendered for locked doors during animation) */}
-      {!isSafe && animationState === 'thud' && (
+      {!isSafe && (
         <div className="door-wall-behind">
             <BrickWallIcon />
         </div>

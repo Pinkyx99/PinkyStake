@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -13,6 +14,7 @@ import useAnimatedBalance from '../../hooks/useAnimatedBalance';
 import DiceRulesModal from './dice/DiceRulesModal';
 import { useUser } from '../../contexts/UserContext';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_ROLL = 2;
 const MAX_ROLL = 98;
@@ -38,6 +40,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
   const [isWin, setIsWin] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const lastInputSource = useRef<'roll' | 'multiplier' | 'chance' | null>(null);
@@ -175,6 +178,8 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
       if (didWin) {
         playSound('win');
         const winnings = betAmount * multiplier;
+        const netWinnings = winnings - betAmount;
+        setWinData({ amount: netWinnings, key: Date.now() });
         adjustBalance(winnings);
       } else {
         playSound('lose');
@@ -200,18 +205,16 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
 
   return (
     <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white select-none">
+       {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
       <header className="flex items-center justify-between p-3 bg-[#1a1b2f] border-b border-gray-700/50">
-        <div className="flex items-center gap-4">
+        <div className="flex-1 flex items-center gap-4">
           <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"><ArrowLeftIcon className="w-6 h-6" /></button>
           <h1 className="text-red-500 text-2xl font-bold uppercase">Dice</h1>
-           <div className="text-xs text-gray-400 font-semibold hidden md:block">
-            <span>Min Bet: {MIN_BET.toFixed(2)} EUR</span> / <span>Max Bet: {MAX_BET.toFixed(2)} EUR</span> / <span>Max Profit: 10000.00 EUR</span>
-          </div>
         </div>
-        <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5">
+        <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
           <span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex-1 flex justify-end items-center space-x-4">
           <span className="font-mono text-gray-400">{formatTime(timer)}</span>
           <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5" /></button>
           <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white flex items-center gap-1"><GameRulesIcon className="w-5 h-5" /> Game Rules</button>

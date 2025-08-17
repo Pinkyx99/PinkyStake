@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useUser } from '../../contexts/UserContext';
 import useAnimatedBalance from '../../hooks/useAnimatedBalance';
@@ -8,6 +10,7 @@ import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
 import FlipRulesModal from './flip/FlipRulesModal';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -28,6 +31,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [flipResult, setFlipResult] = useState<Choice | null>(null);
     const [history, setHistory] = useState<Choice[]>([]);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+    const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
     
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const isMounted = useRef(true);
@@ -61,7 +65,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             if (!isMounted.current) return;
         }
 
-        playSound('deal');
+        playSound('flip_spin');
         setGameState('flipping');
         
         const result: Choice = Math.random() < 0.5 ? 'heads' : 'tails';
@@ -86,7 +90,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             setHistory(h => [result, ...h].slice(0, 20));
             if (result === choice) {
-                playSound('reveal');
+                playSound('flip_win');
                 const newMultiplier = isFirstBet ? 1.98 : multiplier * 1.98; // 99% RTP
                 setMultiplier(newMultiplier);
                 setWinnings(betAmount * newMultiplier);
@@ -102,6 +106,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const handleCashout = async () => {
         if (gameState !== 'won') return;
         playSound('cashout');
+        setWinData({ amount: winnings, key: Date.now() });
         await adjustBalance(winnings);
         if (!isMounted.current) return;
         resetForNewBet();
@@ -127,15 +132,17 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     return (
         <div className="bg-[#0f172a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
+            {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
             <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
-                <div className="flex items-center gap-4">
+                <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white"><ArrowLeftIcon className="w-6 h-6" /></button>
                     <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
                 </div>
-                <div className="bg-slate-900/50 backdrop-blur-sm rounded-md px-4 py-1.5 border border-slate-700/50">
+                <div className="flex-1 flex justify-center bg-slate-900/50 backdrop-blur-sm rounded-md px-4 py-1.5 border border-slate-700/50">
                     <span className="text-lg font-bold text-white">{animatedBalance.toFixed(2)}</span>
                     <span className="text-sm text-gray-400 ml-2">EUR</span>
                 </div>
+                 <div className="flex-1" />
             </header>
 
             <main className="flex-grow pt-20 pb-8 px-4 flex flex-col items-center justify-center relative">

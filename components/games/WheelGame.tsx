@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useUser } from '../../contexts/UserContext';
 import useAnimatedBalance from '../../hooks/useAnimatedBalance';
@@ -11,6 +12,7 @@ import MinusIcon from '../icons/MinusIcon';
 import WheelRulesModal from './wheel/WheelRulesModal';
 import { SEGMENT_CONFIG, MULTIPLIER_COLORS, type RiskLevel, type SegmentCount } from './wheel/payouts';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -31,10 +33,11 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [rotation, setRotation] = useState(0);
     const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     const [hoveredMultiplier, setHoveredMultiplier] = useState<number | null>(null);
+    const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
     
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const isMounted = useRef(true);
-    const soundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const soundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound } = useSound();
 
     useEffect(() => {
@@ -128,6 +131,10 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             
             const winnings = betAmount * winner;
             if (winnings > 0) {
+                const netWinnings = winnings - betAmount;
+                if(netWinnings > 0){
+                   setWinData({ amount: netWinnings, key: Date.now() });
+                }
                 playSound('win');
                 await adjustBalance(winnings);
             } else {
@@ -149,16 +156,17 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     
     return (
         <div className="bg-[#0f172a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
+             {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
             <header className="flex items-center justify-between p-3 bg-[#1e293b] shrink-0 z-10">
-                 <div className="flex items-center gap-4">
+                 <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games"><ArrowLeftIcon className="w-6 h-6" /></button>
                     <h1 className="text-xl font-bold uppercase text-yellow-400">Wheel</h1>
                 </div>
-                 <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5">
+                 <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
                     <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
                     <span className="text-sm text-gray-400 ml-2">EUR</span>
                 </div>
-                <div className="flex items-center space-x-3 text-sm">
+                <div className="flex-1 flex justify-end items-center space-x-3 text-sm">
                     <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
                     <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
                 </div>

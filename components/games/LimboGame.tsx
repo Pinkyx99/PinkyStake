@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useUser } from '../../contexts/UserContext';
 import useAnimatedBalance from '../../hooks/useAnimatedBalance';
@@ -12,6 +13,7 @@ import ChevronUpIcon from '../icons/ChevronUpIcon';
 import ChevronDownIcon from '../icons/ChevronDownIcon';
 import LimboRulesModal from './limbo/LimboRulesModal';
 import { useSound } from '../../hooks/useSound';
+import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -37,6 +39,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
   const [isWin, setIsWin] = useState<boolean | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const isMounted = useRef(true);
@@ -115,6 +118,8 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
         setDisplayResult(finalResult);
 
         if (won) {
+            const netWinnings = profitOnWin - betAmount;
+            setWinData({ amount: netWinnings, key: Date.now() });
             await adjustBalance(profitOnWin);
         }
         
@@ -141,18 +146,16 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
 
   return (
     <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white select-none">
+       {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
       <header className="flex items-center justify-between p-3 bg-[#1a1b2f]">
-        <div className="flex items-center gap-4">
+        <div className="flex-1 flex items-center gap-4">
           <button onClick={onBack} aria-label="Back to games"><ArrowLeftIcon className="w-6 h-6" /></button>
           <h1 className="text-xl font-bold uppercase text-purple-400">Limbo</h1>
-           <div className="text-xs text-gray-400 font-semibold hidden md:flex gap-4">
-            <span>Min Bet: {MIN_BET.toFixed(2)} EUR</span> / <span>Max Bet: {MAX_BET.toFixed(2)} EUR</span> / <span>Max Profit: {MAX_PROFIT.toFixed(2)} EUR</span>
-          </div>
         </div>
-        <div className="flex items-center bg-black/30 rounded-md px-4 py-1.5">
+        <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
           <span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span><span className="text-sm text-gray-400 ml-2">EUR</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex-1 flex justify-end items-center space-x-4">
           <span className="font-mono text-gray-400">{`00:00:${timer.toString().padStart(2, '0')}`}</span>
           <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5" /></button>
           <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white flex items-center gap-1"><GameRulesIcon className="w-5 h-5" /> Game Rules</button>

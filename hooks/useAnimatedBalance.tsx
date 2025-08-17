@@ -14,11 +14,17 @@ const useAnimatedBalance = (targetBalance: number, duration: number = 500) => {
   }, []);
 
   useEffect(() => {
+    // Guard against environments where requestAnimationFrame is not available.
+    if (typeof window === 'undefined' || !window.requestAnimationFrame || !window.cancelAnimationFrame) {
+      setDisplayValue(targetBalance);
+      return;
+    }
+    
     const startValue = displayValue;
     let startTime: number | null = null;
     
     const animationStep = (timestamp: number) => {
-        // Guard against updating state on an unmounted component. This is the fix.
+        // Guard against updating state on an unmounted component.
         if (!isMounted.current) {
             return;
         }
@@ -31,18 +37,22 @@ const useAnimatedBalance = (targetBalance: number, duration: number = 500) => {
         setDisplayValue(currentAnimatedValue);
         
         if (progress < 1) {
-            requestRef.current = requestAnimationFrame(animationStep);
+            requestRef.current = window.requestAnimationFrame(animationStep);
         } else {
             // The isMounted check at the top of the function ensures this is also safe.
             setDisplayValue(targetBalance); // Ensure it lands perfectly
         }
     };
     
-    requestRef.current = requestAnimationFrame(animationStep);
+    // Cancel any existing animation frame before starting a new one.
+    if (requestRef.current) {
+        window.cancelAnimationFrame(requestRef.current);
+    }
+    requestRef.current = window.requestAnimationFrame(animationStep);
 
     return () => {
       if(requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+        window.cancelAnimationFrame(requestRef.current);
       }
     };
 

@@ -4,7 +4,7 @@ import Header from './components/Header';
 import GameCard from './components/GameCard';
 import AnimatedParticles from './components/AnimatedParticles';
 import ErrorBoundary from './components/ErrorBoundary';
-import { type Game, type CSGOBattle } from './types';
+import { type Game } from './types';
 import ChickenGame from './components/games/ChickenGame';
 import BlackjackGame from './components/games/BlackjackGame';
 import DoorsGame from './components/games/DoorsGame';
@@ -14,6 +14,7 @@ import CrashGame from './components/games/CrashGame';
 import LimboGame from './components/games/LimboGame';
 import KenoGame from './components/games/KenoGame';
 import WheelGame from './components/games/WheelGame';
+import PumpGame from './components/games/PumpGame';
 import FlipGame from './components/games/FlipGame';
 import MinesGame from './components/games/MinesGame';
 import MysteryBoxGame from './components/games/MysteryBoxGame';
@@ -22,9 +23,6 @@ import { allMysteryBoxes } from './components/games/mysterybox/data';
 import CSGOGame from './components/games/CSGOGame';
 import CSGOCaseLobby from './components/games/csgo/CSGOCaseLobby';
 import { allCSGOCases } from './components/games/csgo/data';
-import ProfilePage from './components/ProfilePage';
-import CSGOUpgrader from './components/games/csgo/CSGOUpgrader';
-import CSGOCaseBattlesLobby from './components/games/csgo/CSGOCaseBattlesLobby';
 import { useFreeCrate } from './hooks/useFreeCrate';
 import PrizeToast from './components/PrizeToast';
 import { useUser } from './contexts/UserContext';
@@ -33,6 +31,8 @@ import ChatIcon from './components/icons/ChatIcon';
 import SendIcon from './components/icons/SendIcon';
 import SpinnerIcon from './components/icons/SpinnerIcon';
 import CloseIcon from './components/icons/CloseIcon';
+import ProfilePage from './components/ProfilePage';
+import CSGOUpgrader from './components/games/csgo/CSGOUpgrader';
 
 
 const ALL_GAMES: Game[] = [
@@ -45,9 +45,11 @@ const ALL_GAMES: Game[] = [
   { id: 17, title: 'Limbo', slug: 'limbo', imageUrl: 'https://i.imgur.com/picS5KQ.png', color: 'purple' },
   { id: 18, title: 'Keno', slug: 'keno', imageUrl: 'https://i.imgur.com/uKMIrL9.png', color: 'blue' },
   { id: 19, title: 'Wheel', slug: 'wheel', imageUrl: 'https://i.imgur.com/7xzgBDx.png', color: 'yellow' },
+  { id: 20, title: 'Pump', slug: 'pump', imageUrl: 'https://i.imgur.com/4qoWhQi.png', color: 'red' },
   { id: 21, title: 'Flip', slug: 'flip', imageUrl: 'https://i.imgur.com/nxpJKT1.png', color: 'yellow' },
   { id: 22, title: 'Mystery Boxes', slug: 'mysterybox', imageUrl: 'https://i.imgur.com/6l3v02N.png', color: 'cyan' },
   { id: 23, title: 'CSGO Gambling', slug: 'csgo', imageUrl: 'https://i.imgur.com/sIqj4t2.png', color: 'teal' },
+  { id: 5, title: 'Mines', slug: 'mines', imageUrl: 'https://i.imgur.com/cUNo251.png', color: 'purple' },
   { id: 6, title: '', imageUrl: 'https://i.imgur.com/yO8pB9f.png', color: 'green' },
   { id: 7, title: '', imageUrl: 'https://i.imgur.com/3q1sJ2L.png', color: 'brown' },
   { id: 8, title: '', imageUrl: 'https://i.imgur.com/s6p4eF8.png', color: 'teal' },
@@ -216,7 +218,6 @@ const App: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; amount: number } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [csgoBattles, setCsgoBattles] = useState<CSGOBattle[]>([]);
 
   useEffect(() => {
     // Clear timer on unmount to prevent memory leaks or state updates on unmounted component
@@ -311,17 +312,12 @@ const App: React.FC = () => {
       }
       
       if (gameSlug === 'csgo') {
-          const subRoute = parts[2];
-          const dynamicId = parts[3];
-
-          if (subRoute === 'upgrader') {
+          const caseId = parts[2];
+          if (caseId === 'upgrader') {
               return <CSGOUpgrader onBack={() => navigate('/game/csgo')} />;
           }
-          if (subRoute === 'battles') {
-              return <CSGOCaseBattlesLobby battleId={dynamicId} battles={csgoBattles} setBattles={setCsgoBattles} onNavigate={navigate} />;
-          }
-          if (subRoute) { // Must be a caseId
-              const selectedCase = allCSGOCases.find(c => c.id === subRoute);
+          if (caseId) {
+              const selectedCase = allCSGOCases.find(c => c.id === caseId);
               if (selectedCase) {
                   return <CSGOGame onBack={() => navigate('/game/csgo')} case={selectedCase} />;
               }
@@ -339,6 +335,7 @@ const App: React.FC = () => {
         case 'limbo': return <LimboGame onBack={handleGoBack} />;
         case 'keno': return <KenoGame onBack={handleGoBack} />;
         case 'wheel': return <WheelGame onBack={handleGoBack} />;
+        case 'pump': return <PumpGame onBack={handleGoBack} />;
         case 'flip': return <FlipGame onBack={handleGoBack} />;
         case 'mines': return <MinesGame onBack={handleGoBack} />;
         default:

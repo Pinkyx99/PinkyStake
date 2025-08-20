@@ -1,4 +1,3 @@
-
 <script type="importmap">
 {
   "imports": {
@@ -11,10 +10,7 @@
     "class-variance-authority": "https://esm.sh/class-variance-authority@^0.7.1",
     "@radix-ui/react-label": "https://esm.sh/@radix-ui/react-label@^2.1.7",
     "@google/genai": "https://esm.sh/@google/genai@^1.15.0",
-    "@radix-ui/react-select": "https://esm.sh/@radix-ui/react-select@^2.2.6",
-    "firebase/app": "https://esm.sh/firebase@10.12.3/app",
-    "firebase/auth": "https://esm.sh/firebase@10.12.3/auth",
-    "firebase/firestore": "https://esm.sh/firebase@10.12.3/firestore"
+    "@radix-ui/react-select": "https://esm.sh/@radix-ui/react-select@^2.2.6"
   }
 }
 </script>
@@ -130,34 +126,59 @@
       }
       .animate-mine-reveal { animation: mine-reveal 0.4s ease-out; }
 
-      /* --- CSGO Upgrader V3 (Professional Redesign) --- */
+      /* --- CSGO Upgrader V7 (Gauge Redesign) Styles --- */
+      @keyframes upgrader-bg-flow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
       @keyframes upgrader-fail-shake {
         0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        50% { transform: translateX(5px); }
-        75% { transform: translateX(-5px); }
+        25% { transform: translateX(-3px); }
+        50% { transform: translateX(3px); }
+        75% { transform: translateX(-3px); }
       }
-      .upgrader-page.success .gauge-pointer { border-top-color: #22c55e; }
-      .upgrader-page.failure .gauge-pointer { border-top-color: #ef4444; }
-      .upgrader-page.failure .upgrader-v2-main { animation: upgrader-fail-shake 0.3s linear; }
-      
-      .upgrader-v2-main {
+      .upgrader-page {
+        position: relative;
+        min-height: 100vh;
+        background-color: #111827;
+        background-image: linear-gradient(45deg, #111827 0%, #1e293b 50%, #111827 100%);
+        background-size: 200% 200%;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        animation: upgrader-bg-flow 15s ease infinite;
+      }
+      .upgrader-page.success::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(circle, rgba(74, 222, 128, 0.15) 0%, transparent 70%); /* Green glow */
+        animation: upgrader-success-fade 0.8s ease-out;
+      }
+      .upgrader-page.failure::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(circle, rgba(220, 53, 69, 0.15) 0%, transparent 70%);
+         animation: upgrader-success-fade 0.8s ease-out;
+      }
+      .upgrader-page.failure .upgrade-machine { animation: upgrader-fail-shake 0.3s linear; }
+      @keyframes upgrader-success-fade { from { opacity: 1; } to { opacity: 0; } }
+
+      .upgrade-machine {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 2rem;
         width: 100%;
         max-width: 1100px;
-        margin: 2rem auto 1rem;
-        padding: 2rem;
-        background: linear-gradient(145deg, #1f2937, #111827);
-        border: 1px solid #334155;
-        border-radius: 1rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
       }
-
-      .upgrader-v2-slot {
-        width: 300px;
-        height: 300px;
+      .item-slot {
+        width: 250px;
+        height: 250px;
         background-color: rgba(0,0,0,0.2);
         border: 2px solid #374151;
         border-radius: 1rem;
@@ -169,510 +190,433 @@
         gap: 0.5rem;
         text-align: center;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
       }
-      .upgrader-v2-slot::before {
-        content: ''; position: absolute; inset: 0; border-radius: 1rem; padding: 2px;
-        background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.1), transparent 70%);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor; mask-composite: exclude;
-      }
-      .upgrader-v2-slot-inner-single { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-      .upgrader-v2-slot-inner-single img { max-width: 80%; max-height: 150px; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
+      .item-slot-inner img { max-width: 80%; max-height: 150px; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
 
-      .upgrader-v2-slot-inner-duo { display: flex; align-items: center; justify-content: space-around; width: 100%; height: 100%; padding: 1rem; gap: 1rem; }
-      .upgrader-v2-slot-inner-duo img { width: 120px; height: 120px; object-fit: contain; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px; }
+      .item-slot-inner-multi {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.25rem;
+        width: 180px;
+        height: 180px;
+        align-items: center;
+        justify-content: center;
+      }
+      .multi-item-img {
+        width: 55px;
+        height: 55px;
+        object-fit: contain;
+        background: rgba(0,0,0,0.3);
+        border-radius: 4px;
+        padding: 2px;
+      }
+      .multi-item-more {
+        width: 55px;
+        height: 55px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.875rem;
+        color: #9ca3af;
+        background-color: rgba(0,0,0,0.3);
+        border-radius: 4px;
+      }
       
-      .upgrader-v2-slot-inner-multi {
-        display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
-        width: 210px; height: 210px; align-items: center; justify-content: center;
-      }
-      .upgrader-v2-slot-inner-multi img {
-        width: 60px; height: 60px; object-fit: contain; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 4px;
-      }
-      
-      .upgrader-v2-core {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        gap: 1rem; width: 250px;
-      }
-
-      .upgrader-v2-chance-display {
-        width: 170px; height: 170px; border-radius: 50%; background: #0d1117;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        border: 4px solid #334155; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-        position: relative; overflow: hidden; transition: all 0.3s ease;
-      }
+      .upgrade-gauge { position: relative; width: 250px; height: 250px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0.5rem; }
       .gauge-pointer {
         position: absolute;
-        top: -1px;
+        top: -8px; /* Position it just above the circle's edge */
         left: 50%;
         transform: translateX(-50%);
         width: 0;
         height: 0;
         border-left: 10px solid transparent;
         border-right: 10px solid transparent;
-        border-top: 15px solid #22c55e;
+        border-top: 15px solid #facc15; /* Yellow pointer */
         z-index: 10;
-        transition: border-top-color 0.3s ease;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
       }
-      .gauge-svg-container { position: absolute; inset: -4px; transition: transform 6s cubic-bezier(0.23, 1, 0.32, 1); }
+      .gauge-svg-container {
+        width: 100%; height: 100%;
+        transition: transform 6s cubic-bezier(0.2, 1, 0.25, 1);
+      }
       .gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-      .gauge-svg circle { fill: transparent; stroke-width: 10; }
-      .gauge-bg-arc { stroke: #1f2937; }
-      .gauge-win-arc { stroke: #22c55e; transition: stroke-dashoffset 0.5s ease; }
+      .gauge-svg circle { fill: none; stroke-width: 14; }
+      .gauge-bg-arc { stroke: #374151; }
+      .gauge-win-arc { stroke: #facc15; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease-out; }
+      
       .gauge-inner {
-        position: relative; z-index: 1; display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
+        position: absolute; width: 190px; height: 190px;
+        background-color: #111827; border-radius: 50%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
       }
-      .gauge-chance-percent { font-size: 2.25rem; font-weight: 800; color: white; }
-      .gauge-chance-label { font-size: 1rem; color: #9ca3af; text-transform: capitalize;}
-
-      .upgrade-v2-button {
-        padding: 0.75rem 2.5rem; font-size: 1.25rem; font-weight: bold; color: white; border-radius: 0.5rem;
-        transition: all 0.3s ease; border: none; cursor: pointer;
-        background: linear-gradient(45deg, #16a34a, #22c55e); box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3);
+      .gauge-chance-percent {
+        font-size: 2.5rem; /* 40px */
+        font-weight: 800;
+        color: white;
+        line-height: 1.1;
       }
-      .upgrade-v2-button:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4); }
-      .upgrade-v2-button:disabled { background: #374151; cursor: not-allowed; box-shadow: none; transform: none; }
-      .upgrade-v2-button.sell { background: linear-gradient(45deg, #16a34a, #22c55e); box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3); font-size: 1rem; padding: 0.75rem 1.5rem; }
-      .upgrade-v2-button.again { background: linear-gradient(45deg, #52525b, #71717a); box-shadow: 0 5px 15px rgba(113, 113, 122, 0.3); font-size: 1rem; padding: 0.75rem 1.5rem; }
-
-      .inventory-section {
-        width: 100%; max-width: 1200px; display: grid; grid-template-columns: 1fr 1fr;
-        gap: 2rem; margin: 2rem auto;
+      .gauge-chance-label {
+        font-size: 1rem; /* 16px */
+        font-weight: 600;
+        color: #9ca3af; /* gray-400 */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
-      .inventory-panel {
-        background: rgba(17, 24, 39, 0.5); border: 1px solid #334155; border-radius: 1rem;
-        padding: 1rem; height: 400px; display: flex; flex-direction: column;
+      
+      @keyframes ready-pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 10px #facc1580; }
+        50% { transform: scale(1.05); box-shadow: 0 0 20px #facc15; }
       }
-      .inventory-grid {
-        flex-grow: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem; overflow-y: auto; padding: 1rem; align-content: start;
+      .upgrade-button {
+        padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: bold; text-transform: uppercase;
+        cursor: pointer; transition: all 0.2s; border: none;
       }
-      .multiplier-filters { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+      .upgrade-button.ready {
+        background-color: #facc15; color: #111827; /* Yellow */
+        animation: ready-pulse 2s infinite;
+      }
+      .upgrade-button.ready:hover { background-color: #f59e0b; animation-play-state: paused; }
+      .upgrade-button:disabled { background-color: #4b5569; color: #9ca3af; cursor: not-allowed; }
+      
+      .multiplier-filters { display: flex; justify-content: center; gap: 0.75rem; width: 100%; margin-top: 0.5rem; margin-bottom: 0.75rem; }
       .multiplier-btn {
-        padding: 0.5rem 1rem; background: #374151; border: 1px solid #4b5563; color: #d1d5db;
-        border-radius: 0.5rem; font-weight: 600; transition: all 0.2s ease; cursor: pointer;
+        background-color: #374151; color: #d1d5db; border: 2px solid transparent;
+        padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer;
+        transition: all 0.2s ease;
       }
-      .multiplier-btn:hover:not(:disabled) { background: #4b5563; }
-      .multiplier-btn.active { background: #8b5cf6; border-color: #a78bfa; color: white; }
+      .multiplier-btn:hover:not(:disabled) { background-color: #4b5569; color: white; }
+      .multiplier-btn.active { background-color: #fde047; color: #111827; border-color: #facc15; }
       .multiplier-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-      /* CSGO Page Base Styles */
-      .csgo-v2-page, .csgo-lobby-page, .csgo-battle-page {
-        background-color: #0d1117;
-        background-image: radial-gradient(circle at 1% 1%, #1f2937 0%, #0d1117 40%);
-        min-height: 100vh;
-        color: white;
+      .inventory-section { display: flex; gap: 1rem; width: 100%; max-width: 1200px; height: 350px; flex-grow: 1; }
+      .inventory-panel { flex: 1; background-color: #1f2937; border-radius: 0.5rem; padding: 0.75rem; display: flex; flex-direction: column; }
+      .inventory-grid {
+        flex-grow: 1; overflow-y: auto; display: grid;
+        grid-template-columns: repeat(auto-fill, 130px);
+        justify-content: center;
+        gap: 0.75rem; padding-right: 0.5rem;
       }
-      .price-ticker-marquee {
-        width: 100%; overflow: hidden; background: rgba(0,0,0,0.3);
-        padding: 0.5rem 0; border-bottom: 1px solid #334155;
-      }
-      .price-ticker-content { display: flex; white-space: nowrap; animation: marquee 60s linear infinite; }
-      .price-ticker-item {
-        margin: 0 2rem; font-size: 0.875rem; font-weight: 600;
-        display: flex; align-items: center; gap: 0.5rem;
-      }
-      @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
+      .inventory-grid::-webkit-scrollbar { width: 4px; }
+      .inventory-grid::-webkit-scrollbar-thumb { background-color: #4b5569; border-radius: 4px; }
 
-      .csgo-sub-nav { background: #1e293b; border-bottom: 1px solid #334155; }
-      .csgo-sub-nav-item {
-        padding: 1rem 1.5rem; font-weight: 600; color: #9ca3af; border-bottom: 3px solid transparent;
-        transition: all 0.2s ease-in-out; position: relative;
+      .skin-card {
+        background: radial-gradient(circle at 50% 0%, #334155, #0f172a 80%);
+        border: 2px solid #374151; border-radius: 0.5rem; padding: 0.5rem;
+        transition: all 0.2s; display: flex; flex-direction: column; align-items: center;
+        text-align: center; position: relative; height: 160px; /* Fixed height */
       }
-      .csgo-sub-nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
-      .csgo-sub-nav-item.active { color: #ef4444; border-bottom-color: #ef4444; }
-      .csgo-sub-nav-item.coming-soon .coming-soon-badge {
-        position: absolute; top: 5px; right: 5px; background-color: #f59e0b; color: black;
-        font-size: 0.6rem; padding: 1px 4px; border-radius: 4px; font-weight: bold;
-      }
-      
-      /* --- CSGO Professional UI Overhaul V3 (Lobby, Opener) --- */
-      /* Lobby Enhancements */
-      .csgo-hero-banner {
-          display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-          gap: 2rem; padding: 2rem; border-radius: 1rem;
-          background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(17, 24, 39, 0.7) 100%);
-          border: 1px solid #334155; backdrop-filter: blur(8px); position: relative; overflow: hidden;
-      }
-      @media (min-width: 768px) { .csgo-hero-banner { flex-direction: row; } }
-      .csgo-hero-bg {
-          position: absolute; inset: 0; background-size: cover; background-position: center;
-          opacity: 0.1; filter: blur(20px) saturate(0.8); transform: scale(1.2); z-index: 0;
-      }
-      .csgo-hero-title { font-size: 2.5rem; font-weight: 900; text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
-      .csgo-hero-price { font-size: 1.5rem; font-weight: 700; color: #facc15; }
-      .csgo-hero-button {
-          margin-top: 1rem; padding: 0.75rem 2rem;
-          background: linear-gradient(45deg, #ef4444, #f87171); color: white;
-          font-weight: bold; border-radius: 0.5rem; transition: all 0.3s ease;
-          box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
-      }
-      .csgo-hero-button:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4); }
-      .csgo-hero-image {
-          width: 280px; height: 280px; object-fit: contain;
-          filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.5)); transition: transform 0.3s ease;
-      }
-      .csgo-hero-banner:hover .csgo-hero-image { transform: scale(1.05) rotate(2deg); }
-      .csgo-cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
-      .csgo-case-card {
-          position: relative; background: linear-gradient(145deg, #1f2937, #111827);
-          border: 1px solid #334155; border-radius: 0.75rem; padding: 1rem;
-          transition: all 0.3s ease; overflow: hidden; cursor: pointer;
-      }
-      .csgo-case-card::before {
-          content: ''; position: absolute; top: 0; left: 0; width: 150px; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-          transform: translateX(-100%) skewX(-25deg); transition: transform 0.6s ease;
-      }
-      .csgo-case-card:hover::before { transform: translateX(250%) skewX(-25deg); }
-      .csgo-case-card:hover {
-          transform: translateY(-5px); border-color: #6366f1;
-          box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);
-      }
-      .csgo-case-card-image { height: 140px; width: 100%; object-fit: contain; transition: transform 0.3s ease; margin-bottom: 0.5rem; }
-      .csgo-case-card:hover .csgo-case-card-image { transform: scale(1.1); }
-      .csgo-case-card-risk-btn { display: none; }
+      .skin-card:hover { transform: translateY(-2px); border-color: #6b7280; }
+      .skin-card.selected { border-color: #4ade80; box-shadow: 0 0 10px #4ade80; }
+      .skin-card img { height: 70px; object-fit: contain; margin-bottom: 0.5rem; }
 
-      /* Case Opener Enhancements */
-      @keyframes case-float {
-        0%, 100% { transform: translateY(0) rotate(-1deg); filter: drop-shadow(0 10px 25px rgba(239, 68, 68, 0.2)); }
-        50% { transform: translateY(-8px) rotate(1deg); filter: drop-shadow(0 15px 35px rgba(239, 68, 68, 0.3)); }
-      }
-      .animate-case-float { animation: case-float 4s ease-in-out infinite; }
-      .csgo-v2-top-container {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(17, 24, 39, 0.5));
-        border: 1px solid #334155; border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem;
-        width: 100%; max-width: 1100px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      }
-      .csgo-v2-top-section { display: flex; flex-direction: column; md:flex-direction: row; align-items: center; justify-content: space-around; gap: 2rem; }
-      .csgo-v2-case-image-container { display: flex; align-items: center; justify-content: center; min-height: 180px; }
-      .csgo-v2-case-image { max-width: 100%; max-height: 160px; object-fit: contain; }
-      .csgo-v2-controls-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-      .csgo-v2-case-title { font-size: 1.75rem; font-weight: 800; text-align: center; }
-      .csgo-v2-count-btns { display: flex; gap: 0.5rem; background: #111827; padding: 0.25rem; border-radius: 0.5rem; }
-      .csgo-v2-count-btn {
-        width: 40px; height: 40px; border-radius: 0.375rem; background: #374151; color: white;
-        font-weight: bold; transition: all 0.2s ease;
-      }
-      .csgo-v2-count-btn:hover:not(.active) { background: #4b5563; }
-      .csgo-v2-count-btn.active { background: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
-      .csgo-v2-action-btns { display: flex; gap: 1rem; width: 100%; }
-      .csgo-v2-open-btn {
-        flex-grow: 1; padding: 0.75rem 1rem; font-size: 1rem; font-weight: bold; color: white; border-radius: 0.5rem;
-        background: linear-gradient(45deg, #ef4444, #f87171);
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
-        transition: all 0.2s ease-in-out;
-      }
-      .csgo-v2-open-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4); }
-      .csgo-v2-open-btn:disabled { background: #374151; cursor: not-allowed; box-shadow: none; transform: none; }
-      .csgo-v2-demo-btn {
-        padding: 0.75rem 1rem; font-size: 1rem; font-weight: bold; color: #d1d5db; border-radius: 0.5rem;
-        background: transparent; border: 2px solid #4b5563;
-        transition: all 0.2s ease-in-out;
-      }
-      .csgo-v2-demo-btn:hover:not(:disabled) { background: #4b5563; color: white; border-color: #4b5563; }
-      .csgo-v2-provably-fair { font-size: 0.75rem; color: #6b7280; text-decoration: underline; margin-top: 0.5rem; }
-
-      .csgo-multi-spinner-container {
-        display: flex;
-        align-items: center;
-        position: relative;
-        overflow: hidden;
-        background-image: radial-gradient(circle at 50% 100%, #1f2937 0%, transparent 70%);
-        padding: 2rem 0;
-      }
-      .csgo-skip-button {
-        position: absolute; bottom: 0.5rem; left: 50%; transform: translateX(-50%);
-        background: transparent; border: none; color: rgba(255, 255, 255, 0.3);
-        font-weight: bold; text-transform: uppercase; cursor: pointer;
-        transition: color 0.2s ease; z-index: 20; letter-spacing: 0.1em;
-      }
-      .csgo-skip-button:hover { color: rgba(255, 255, 255, 0.8); }
-
-      .csgo-multi-spinner-marker {
-        position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-        width: 4px; height: 100%; background: linear-gradient(to bottom, transparent, #f87171, transparent);
-        box-shadow: 0 0 15px #f87171; z-index: 10;
-      }
-      .csgo-reels-column { display: flex; flex-direction: column; gap: 1rem; width: 100%; }
-      .csgo-reel-wrapper { width: 100%; height: 160px; position: relative; }
-      .csgo-reel { display: flex; position: absolute; top: 0; left: 0; will-change: transform; }
-      .csgo-reel-item { width: 144px; height: 160px; padding: 8px; box-sizing: border-box; flex-shrink: 0; }
-      .csgo-reel-item-inner {
-        border-bottom: 4px solid var(--rarity-color); background: linear-gradient(145deg, #1f2937, #111827);
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); height: 100%; display: flex; flex-direction: column;
-        justify-content: center; align-items: center; text-align: center; border-radius: 0.25rem;
-      }
-      .csgo-reel-item-image { width: 100%; height: 90px; object-fit: contain; margin-bottom: 0.25rem; }
-      .csgo-reel-item-name, .csgo-reel-item-skin { font-size: 0.75rem; line-height: 1.2; white-space: normal; padding: 0 4px; }
-      .csgo-v2-contents-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1.5rem;
-      }
-      
-      /* Universal Rarity & Card Styles */
+      /* Rarity Text Colors */
+      .text-rarity-Consumer { color: #d1d5db; } .text-rarity-Industrial { color: #60a5fa; }
       .text-rarity-Mil-Spec { color: #3b82f6; } .text-rarity-Restricted { color: #8b5cf6; }
       .text-rarity-Classified { color: #ec4899; } .text-rarity-Covert { color: #ef4444; }
       .text-rarity-Contraband { color: #f97316; } .text-rarity-Extraordinary { color: #f59e0b; }
-      .text-rarity-Consumer { color: #d1d5db; } .text-rarity-Industrial { color: #60a5fa; }
-      .rarity-glow-Mil-Spec { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8)); }
-      .rarity-glow-Restricted { filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.8)); }
-      .rarity-glow-Classified { filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.8)); }
-      .rarity-glow-Covert { filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }
-      .rarity-glow-Contraband { filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8)); }
-      .rarity-glow-Extraordinary { filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.9)); }
-      .rarity-glow-Consumer { filter: drop-shadow(0 0 6px rgba(209, 213, 219, 0.7)); }
-      .rarity-glow-Industrial { filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.7)); }
 
-      /* Redesigned Upgrader Skin Card (to match Mystery Box style) */
-      .skin-card {
-        position: relative; display: flex; flex-direction: column;
-        background: linear-gradient(145deg, #21243e, #111827);
-        border: 1px solid #4b5563; border-radius: 0.5rem;
-        transition: all 0.2s ease; padding: 0.75rem;
-        justify-content: space-between; align-items: center; text-align: center;
+      /* Rarity Glow Filters */
+      .rarity-glow-Consumer { filter: drop-shadow(0 0 8px #d1d5db80); } .rarity-glow-Industrial { filter: drop-shadow(0 0 8px #60a5fa80); }
+      .rarity-glow-Mil-Spec { filter: drop-shadow(0 0 8px #3b82f680); } .rarity-glow-Restricted { filter: drop-shadow(0 0 8px #8b5cf680); }
+      .rarity-glow-Classified { filter: drop-shadow(0 0 8px #ec489980); } .rarity-glow-Covert { filter: drop-shadow(0 0 8px #ef444480); }
+      .rarity-glow-Contraband { filter: drop-shadow(0 0 8px #f9731680); } .rarity-glow-Extraordinary { filter: drop-shadow(0 0 8px #f59e0b80); }
+
+      /* --- CSGO Case Lobby V2 Styles --- */
+      .csgo-lobby-page {
+        background: linear-gradient(135deg, #1a1d3a 0%, #0f1124 100%);
+        color: #e5e7eb;
       }
-      .skin-card:hover {
-        transform: translateY(-4px); border-color: #a78bfa;
-        box-shadow: 0 5px 20px rgba(167, 139, 250, 0.2);
+
+      @keyframes marquee {
+        0% { transform: translateX(0%); }
+        100% { transform: translateX(-50%); }
       }
-      .skin-card.selected {
-        border-color: #22c55e;
-        box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
-      }
-      .skin-card-image-container {
-        height: 80px; display: flex; align-items: center; justify-content: center;
-        margin-bottom: 0.5rem; width: 100%;
-      }
-      .skin-card-image-container img {
-        max-width: 100%; max-height: 100%; object-fit: contain; transition: opacity 0.2s ease;
-      }
-      .skin-card-info { text-align: center; width: 100%; }
-      .skin-card-price { font-weight: 700; color: #facc15; margin-top: 0.5rem; font-size: 0.875rem; }
-      
-      /* Base styles for other cards, ensure they are not overwritten */
-      .player-item-card, .csgo-v2-content-card {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        background: linear-gradient(145deg, #1f2937, #111827);
-        border: 1px solid #334155;
-        border-radius: 0.5rem;
+      .price-ticker-marquee {
+        width: 100%;
         overflow: hidden;
-        transition: all 0.2s ease;
+        background-color: #111827;
+        border-bottom: 1px solid #374151;
+        padding: 0.5rem 0;
+        white-space: nowrap;
       }
-      .player-item-card:hover, .csgo-v2-content-card:hover {
-        transform: translateY(-4px);
-        border-color: #6366f1;
-      }
-      
-      .player-item-card {
-        justify-content: flex-start;
-        align-items: center;
-        text-align: center;
-        padding: 0.75rem;
-      }
-      .player-item-card img {
-        max-width: 90%;
-        height: 80px;
-        object-fit: contain;
-        flex-grow: 0;
-      }
-      .player-item-card::after {
-        content: '';
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 4px;
-        background-color: var(--rarity-color);
-        border-bottom-left-radius: 0.5rem;
-        border-bottom-right-radius: 0.5rem;
-      }
-
-      /* Rectangular Cards (Case Contents) */
-      .csgo-v2-content-card {
-        justify-content: flex-start;
-      }
-      .csgo-v2-item-header {
+      .price-ticker-content {
         display: flex;
-        justify-content: space-between;
+        width: 200%;
+        animation: marquee 60s linear infinite;
+      }
+      .price-ticker-item {
+        display: inline-flex;
         align-items: center;
-        padding: 0.25rem 0.5rem;
-        background: rgba(0,0,0,0.2);
-        font-size: 0.75rem;
-      }
-      .csgo-v2-item-price {
-        color: #22c55e;
+        gap: 0.5rem;
+        margin: 0 2rem;
+        font-size: 0.875rem;
         font-weight: 600;
-      }
-      .csgo-v2-item-odds {
         color: #9ca3af;
       }
-      .csgo-v2-content-card-image-wrapper {
-        flex-grow: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem 0.5rem;
-        min-height: 120px;
+
+      .csgo-sub-nav {
+        background-color: #1f2937;
+        border-bottom: 1px solid #4b5569;
       }
-      .csgo-v2-content-card-image {
-        max-width: 95%;
-        max-height: 100px;
-        object-fit: contain;
+      .csgo-sub-nav-item {
+        position: relative;
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #9ca3af;
+        transition: color 0.2s ease;
+        border-bottom: 3px solid transparent;
       }
-      .csgo-v2-content-card .text-center {
-        padding: 0.25rem 0.5rem 0.75rem;
+      .csgo-sub-nav-item:hover { color: #ffffff; }
+      .csgo-sub-nav-item.active {
+        color: #ffffff;
+        border-bottom-color: #ef4444;
       }
-      .csgo-v2-content-card-rarity-bar {
+      .csgo-sub-nav-item.coming-soon { opacity: 0.6; cursor: not-allowed; }
+      .coming-soon-badge {
         position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 4px;
-        background-color: var(--rarity-color);
-      }
-      
-      /* --- CSGO Case Battles V2 Professional Overhaul --- */
-      /* Lobby Card */
-      .battle-lobby-card {
-        background: linear-gradient(145deg, #1f2937, #111827);
-        border: 1px solid #334155;
-        transition: all 0.3s ease;
-      }
-      .battle-lobby-card:hover {
-        transform: translateY(-5px);
-        border-color: #8b5cf6;
-        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
-      }
-      .battle-cases-preview {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem;
-        background: rgba(0,0,0,0.2);
-        border-radius: 0.5rem;
-        min-height: 64px; /* 4rem */
-      }
-      .battle-cases-preview img {
-        width: 48px; /* 3rem */
-        height: 48px;
-        object-fit: contain;
-        margin-right: -16px; /* -1rem, creates overlap */
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-        transition: transform 0.2s ease;
-      }
-      .battle-lobby-card:hover .battle-cases-preview img {
-        transform: scale(1.1);
-      }
-      .battle-player-slots {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-      }
-      .battle-player-slot {
-        width: 40px; /* 2.5rem */
-        height: 40px;
-        border-radius: 50%;
-        background-color: #111827;
-        border: 2px solid #374151;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .battle-player-slot.filled {
-        border-color: #8b5cf6;
-      }
-      .battle-player-slot img {
-        width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+        top: 0.5rem;
+        right: 0.25rem;
+        font-size: 0.6rem;
+        font-weight: bold;
+        background-color: #f59e0b;
+        color: #111827;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        transform: rotate(10deg);
       }
 
-      /* Battle View Styles */
-      .battle-view-header {
-          background: rgba(17, 24, 39, 0.7);
-          backdrop-filter: blur(4px);
-          border-bottom: 1px solid #334155;
-      }
-      .arena-grid { display: grid; gap: 1rem; width: 100%; height: 100%; }
-      .player-area {
-          background: rgba(30, 41, 59, 0.5); border: 1px solid #334155;
-          border-radius: 0.5rem; overflow: hidden; position: relative;
-          transition: all 0.3s ease;
-          display: flex; flex-direction: column;
-      }
-      .player-area.winner-glow {
-          box-shadow: 0 0 15px rgba(250, 204, 21, 0.5), inset 0 0 20px rgba(250, 204, 21, 0.2);
-          border-color: #facc15;
-      }
-      .player-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; background: rgba(17, 24, 39, 0.5); }
-      .player-avatar { width: 2.5rem; height: 2.5rem; border-radius: 9999px; border: 2px solid #4b5563; }
-      .player-item-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 0.5rem; padding: 0.75rem;
-        overflow-y: auto;
-      }
-      .battle-result-overlay {
-          position: absolute; inset: 0;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 3rem; font-weight: 900;
-          text-transform: uppercase; z-index: 10;
-          backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-          animation: multi-win-fade-in 0.5s ease-out;
-      }
-      .battle-result-overlay.win {
-          background: radial-gradient(circle, rgba(250, 204, 21, 0.3) 0%, rgba(250, 204, 21, 0) 70%);
-          color: #fde047; text-shadow: 0 0 20px #fde047, 0 0 10px white;
-      }
-      .battle-result-overlay.loss {
-          background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0) 70%);
-          color: #d1d5db;
-      }
-      .form-checkbox {
-          appearance: none; -webkit-appearance: none;
-          background-color: #374151; border: 1px solid #4b5563;
-          padding: 0; display: inline-block; vertical-align: middle;
-          position: relative; cursor: pointer;
-      }
-      .form-checkbox:checked { background-color: #8b5cf6; border-color: #a78bfa; }
-      .form-checkbox:checked::after {
-          content: '✔'; position: absolute;
-          color: white; font-size: 1rem; line-height: 1;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-      }
-
-      .player-area .csgo-multi-spinner-container { padding: 0.5rem 0; background-image: none; }
-      .player-area .csgo-reel-wrapper { height: 120px; }
-      .player-area .csgo-reel-item { width: 108px; height: 120px; padding: 4px; }
-      .player-area .csgo-reel-item-image { height: 60px; }
-      .player-area .csgo-reel-item-name, .player-area .csgo-reel-item-skin { font-size: 0.65rem; }
-
-      /* Battle View Item Card */
-      .battle-item-card {
+      .csgo-hero-banner {
         position: relative;
         display: flex;
         flex-direction: column;
-        background: linear-gradient(145deg, #1f2937dd, #111827dd);
-        border-bottom: 4px solid var(--rarity-color);
-        border-radius: 0.375rem; /* 6px */
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+        background-color: #1f2937;
+        border-radius: 1rem;
+        padding: 2rem;
         overflow: hidden;
-        padding: 0.25rem; /* 4px */
+        border: 1px solid #374151;
+      }
+      @media (min-width: 768px) {
+        .csgo-hero-banner { flex-direction: row; }
+      }
+      .csgo-hero-bg {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(0.4);
+        transform: scale(1.2);
+        opacity: 0.5;
+      }
+      .csgo-hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #ffffff;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      }
+      .csgo-hero-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #facc15;
+        margin: 0.5rem 0 1.5rem;
+      }
+      .csgo-hero-button {
+        padding: 0.75rem 2.5rem;
+        background: linear-gradient(to right, #ef4444, #f97316);
+        color: white;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 15px #ef444480;
+      }
+      .csgo-hero-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px #ef4444;
+      }
+      .csgo-hero-image {
+        width: 200px;
+        height: 200px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+      }
+       @media (min-width: 768px) {
+        .csgo-hero-image { width: 250px; height: 250px; }
+      }
+
+      .csgo-cases-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .csgo-case-card {
+        background: linear-gradient(145deg, #2a354a, #1f2937);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        border: 1px solid #374151;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .csgo-case-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255, 255, 255, 0.1), transparent 40%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .csgo-case-card:hover {
+        transform: translateY(-5px) scale(1.03);
+        border-color: #ef4444;
+        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+      }
+      .csgo-case-card:hover::before {
+        opacity: 1;
+      }
+      .csgo-case-card-image-wrapper {
+        height: 150px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        text-align: center;
+        margin-bottom: 1rem;
       }
-      .battle-item-card-image {
-        height: 50px; /* smaller image */
-        max-width: 90%;
+      .csgo-case-card-image {
+        max-width: 100%;
+        max-height: 100%;
         object-fit: contain;
-        margin-bottom: 0.25rem;
+        filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
+        transition: transform 0.3s ease;
       }
-      .battle-item-card-price {
-        font-size: 0.75rem; /* 12px */
-        font-weight: 700;
-        color: #22c55e; /* green-500 */
+      .csgo-case-card:hover .csgo-case-card-image {
+        transform: scale(1.1);
       }
+      .csgo-case-card-risk-btn {
+        background-color: #374151;
+        color: #9ca3af;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+      .csgo-case-card-risk-btn:hover {
+        background-color: #4b5569;
+        color: white;
+      }
+      .csgo-case-card-risk-btn.active {
+        background-color: #ef4444;
+        color: white;
+      }
+      .csgo-case-card-risk-btn.active .risk-indicator {
+          opacity: 1;
+          transform: scaleX(1);
+      }
+
+      /* --- CSGO Case Opening V2 Styles --- */
+      .csgo-v2-page {
+        background: radial-gradient(ellipse at top, #2c2a4a, #101124);
+      }
+      .csgo-v2-top-container {
+        width: 100%;
+        max-width: 1200px;
+        min-height: 450px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+      .csgo-v2-top-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        gap: 3rem;
+        width: 100%;
+        padding: 2rem;
+        background: rgba(0,0,0,0.1);
+        border-radius: 1rem;
+      }
+      .csgo-v2-case-image-container { perspective: 1000px; }
+      .csgo-v2-case-image {
+        width: 250px; height: 250px; object-fit: contain;
+        filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation: case-float 4s ease-in-out infinite;
+      }
+      @keyframes case-float {
+        0%, 100% { transform: translateY(0) rotateY(-5deg); }
+        50% { transform: translateY(-15px) rotateY(5deg); }
+      }
+      .csgo-v2-controls-container { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; text-align: center; }
+      .csgo-v2-case-title { font-size: 2.5rem; font-weight: 800; color: white; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
+      .csgo-v2-count-btns { display: flex; gap: 0.5rem; background-color: #111827; padding: 0.5rem; border-radius: 99px; }
+      .csgo-v2-count-btn {
+        width: 40px; height: 40px; border-radius: 50%; background-color: #374151; color: #d1d5db;
+        font-weight: bold; transition: all 0.2s; border: 2px solid transparent;
+      }
+      .csgo-v2-count-btn:hover:not(.active) { background-color: #4b5569; }
+      .csgo-v2-count-btn.active { background-color: #ef4444; color: white; border-color: #f87171; box-shadow: 0 0 10px #ef4444; }
+      .csgo-v2-action-btns { display: flex; gap: 1rem; }
+      .csgo-v2-open-btn, .csgo-v2-demo-btn { padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: bold; text-transform: uppercase; transition: all 0.3s ease; }
+      .csgo-v2-open-btn { background: linear-gradient(to right, #ef4444, #f97316); color: white; box-shadow: 0 0 15px #ef444480; }
+      .csgo-v2-open-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 25px #ef4444; }
+      .csgo-v2-open-btn:disabled { background: #4b5569; cursor: not-allowed; opacity: 0.6; }
+      .csgo-v2-demo-btn { background-color: #374151; color: #d1d5db; }
+      .csgo-v2-demo-btn:hover { background-color: #4b5569; }
+      .csgo-v2-provably-fair { font-size: 0.75rem; color: #6b7280; text-decoration: underline; transition: color 0.2s; }
+      .csgo-v2-provably-fair:hover { color: #9ca3af; }
+      .csgo-multi-spinner-container {
+        position: relative; width: 100%; height: 100%; padding: 1rem 0;
+        background: linear-gradient(rgba(0,0,0,0.5), transparent, rgba(0,0,0,0.5));
+        border-radius: 1rem; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      .csgo-multi-spinner-container::before, .csgo-multi-spinner-container::after {
+        content: ''; position: absolute; left: 0; right: 0; height: 50%; z-index: 5; pointer-events: none;
+      }
+      .csgo-multi-spinner-container::before { top: 0; background: linear-gradient(to right, #101124, transparent 20%, transparent 80%, #101124); }
+      .csgo-multi-spinner-container::after { bottom: 0; background: linear-gradient(to right, #101124, transparent 20%, transparent 80%, #101124); }
+      .csgo-multi-spinner-marker {
+        position: absolute; left: 50%; top: 0; bottom: 0; width: 4px;
+        background: linear-gradient(to bottom, transparent, #fde047, transparent);
+        transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #fde047, 0 0 20px #fde047; border-radius: 2px;
+      }
+      .csgo-reels-column { display: flex; flex-direction: column; gap: 1rem; }
+      .csgo-reel-wrapper { height: 150px; }
+      .csgo-reel { display: flex; height: 100%; }
+      .csgo-reel-item { width: 144px; height: 150px; padding: 4px; flex-shrink: 0; }
+      .csgo-reel-item-inner {
+        width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #334155, #0f172a 80%);
+        border-radius: 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 0.5rem; text-align: center; border-bottom: 4px solid var(--rarity-color);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+      }
+      .csgo-reel-item-image { height: 70px; object-fit: contain; }
+      .csgo-reel-item-name { font-size: 0.75rem; color: #d1d5db; margin-top: 0.25rem; }
+      .csgo-reel-item-skin { font-size: 0.8rem; font-weight: bold; }
+      .csgo-v2-contents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; }
+      .csgo-v2-content-card {
+        background: linear-gradient(145deg, #2a354a, #1f2937); border-radius: 0.75rem; padding: 0.75rem;
+        border: 1px solid #374151; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column;
+      }
+      .csgo-v2-content-card:hover { transform: translateY(-4px); border-color: var(--rarity-color); box-shadow: 0 5px 20px color-mix(in srgb, var(--rarity-color) 30%, transparent); }
+      .csgo-v2-item-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; margin-bottom: 0.5rem; }
+      .csgo-v2-item-price { font-weight: bold; color: #16a34a; }
+      .csgo-v2-item-odds { color: #9ca3af; }
+      .csgo-v2-content-card-image-wrapper { flex-grow: 1; display: flex; align-items: center; justify-content: center; height: 120px; }
+      .csgo-v2-content-card-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .csgo-v2-content-card-rarity-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background-color: var(--rarity-color); box-shadow: 0 0 8px var(--rarity-color); }
+      @keyframes multi-win-fade-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+      .animate-multi-win-fade-in { animation: multi-win-fade-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; backdrop-filter: blur(4px); }
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      .animate-fade-in { animation: fade-in 0.5s ease forwards; }
     </style>
   <link rel="stylesheet" href="/index.css">
 </head>

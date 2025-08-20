@@ -1,8 +1,7 @@
-
 export interface Game {
   id: number;
   title: string;
-  slug?: 'chicken' | 'blackjack' | 'doors' | 'dice' | 'roulette' | 'crash' | 'limbo' | 'keno' | 'wheel' | 'flip' | 'mysterybox' | 'csgo' | 'mines';
+  slug?: 'chicken' | 'blackjack' | 'doors' | 'dice' | 'roulette' | 'crash' | 'limbo' | 'keno' | 'wheel' | 'pump' | 'flip' | 'mysterybox' | 'csgo' | 'mines';
   imageUrl: string;
   color: 'orange' | 'purple' | 'green' | 'brown' | 'yellow' | 'teal' | 'pink' | 'blue' | 'cyan' | 'red';
 }
@@ -73,25 +72,4 @@ export interface CSGOCase {
   imageUrl: string;
   items: CSGOItem[];
   category: 'Official' | 'Creators' | 'New' | 'Event';
-}
-
-// CSGO Case Battles Types
-export interface CSGOBattlePlayer {
-  id: string; // 'user' or bot id
-  name: string;
-  avatarUrl: string;
-  isBot: boolean;
-  items: CSGOItem[];
-  totalValue: number;
-}
-
-export interface CSGOBattle {
-  id: string;
-  cases: CSGOCase[];
-  players: (CSGOBattlePlayer | null)[]; // Array of players or empty slots
-  playerCount: number;
-  isReverseMode: boolean;
-  status: 'waiting' | 'live' | 'finished';
-  cost: number;
-  winnerId?: string;
 }

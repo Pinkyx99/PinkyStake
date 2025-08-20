@@ -12,11 +12,23 @@ interface ProfilePageProps {
 type ActiveTab = 'inventory' | 'promocodes';
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
-  const { profile } = useUser();
+  const { profile, setBalance } = useUser();
   const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
   const [activeTab, setActiveTab] = useState<ActiveTab>('inventory');
+  const [adminBalanceInput, setAdminBalanceInput] = useState('');
 
   const inventoryValue = profile.inventory.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  
+  const handleSetBalance = () => {
+    const newBalance = parseFloat(adminBalanceInput);
+    if (!isNaN(newBalance) && newBalance >= 0) {
+        setBalance(newBalance);
+        setAdminBalanceInput('');
+    } else {
+        alert("Please enter a valid, non-negative number for the balance.");
+    }
+  };
+
 
   return (
     <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white">
@@ -83,6 +95,27 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                 <PromoCodeSection />
             )}
         </div>
+        
+        <div className="mt-12 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+            <h3 className="text-lg font-bold text-red-400">Admin Controls</h3>
+            <p className="text-sm text-red-400/70 mb-4">For development purposes only.</p>
+            <div className="flex items-center gap-2 max-w-sm">
+                <input
+                    type="number"
+                    value={adminBalanceInput}
+                    onChange={(e) => setAdminBalanceInput(e.target.value)}
+                    placeholder="Set new balance"
+                    className="flex-grow bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <button
+                    onClick={handleSetBalance}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-md font-bold text-white transition-colors"
+                >
+                    Set Balance
+                </button>
+            </div>
+        </div>
+
 
       </main>
     </div>

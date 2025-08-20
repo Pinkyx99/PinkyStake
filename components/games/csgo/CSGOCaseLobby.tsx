@@ -69,8 +69,9 @@ const CSGOCaseLobby: React.FC<CSGOCaseLobbyProps> = ({ onBack, onNavigate }) => 
                     <button className="csgo-sub-nav-item" onClick={() => onNavigate('/game/csgo/upgrader')}>
                         Upgrader
                     </button>
-                     <button className="csgo-sub-nav-item" onClick={() => onNavigate('/game/csgo/battles')}>
+                     <button className="csgo-sub-nav-item coming-soon" onClick={() => alert('Coming Soon!')}>
                         Case Battles
+                        <span className="coming-soon-badge">SOON</span>
                     </button>
                      <button className="csgo-sub-nav-item coming-soon" onClick={() => alert('Coming Soon!')}>
                         Contracts

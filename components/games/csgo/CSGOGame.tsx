@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ArrowLeftIcon from '../../icons/ArrowLeftIcon';
 import useAnimatedBalance from '../../../hooks/useAnimatedBalance';
@@ -16,48 +15,6 @@ const RARITY_COLORS: Record<CSGOItemRarity, string> = {
     'Consumer': '#d1d5db',
     'Industrial': '#60a5fa',
 };
-
-const SingleWinCSGOModal: React.FC<{ item: CSGOItem, onClose: () => void }> = ({ item, onClose }) => {
-    const { adjustBalance, addToCsgoInventory } = useUser();
-    const { playSound } = useSound();
-
-    const handleSell = () => {
-        playSound('cashout');
-        adjustBalance(item.price);
-        onClose();
-    };
-
-    const handleKeep = () => {
-        playSound('click');
-        addToCsgoInventory([item]);
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center font-poppins" onClick={onClose}>
-            <div
-                className="bg-slate-900/80 border border-slate-700 w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center animate-win-item-modal-fade-in"
-                onClick={e => e.stopPropagation()}
-                style={{'--rarity-color-transparent': `${RARITY_COLORS[item.rarity]}33`} as React.CSSProperties}
-            >
-                <h2 className="text-2xl font-bold text-yellow-400">You Won!</h2>
-                <div className="my-6 flex flex-col items-center">
-                    <div className="w-48 h-48 p-4 bg-slate-800 rounded-lg flex items-center justify-center">
-                        <img src={item.imageUrl} alt={item.skin} className={`max-w-full max-h-full object-contain rarity-glow-${item.rarity}`} />
-                    </div>
-                    <p className="text-sm text-gray-300 mt-4 truncate">{item.statTrak && <span className="text-orange-400">StatTrak™ </span>}{item.rarity === 'Extraordinary' && '★ '}{item.weapon}</p>
-                    <p className={`font-bold text-lg text-rarity-${item.rarity} truncate`}>{item.skin}</p>
-                    <p className="text-lg font-bold text-green-400">${item.price.toFixed(2)}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <button onClick={handleKeep} className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">Keep Item</button>
-                    <button onClick={handleSell} className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold transition-colors">Sell for ${item.price.toFixed(2)}</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 const MultiWinCSGOModal: React.FC<{ items: CSGOItem[], onClose: () => void }> = ({ items, onClose }) => {
     const { adjustBalance, addToCsgoInventory } = useUser();
@@ -131,13 +88,9 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
     const [caseCount, setCaseCount] = useState(1);
     const [isSpinning, setIsSpinning] = useState(false);
     const [spinResults, setSpinResults] = useState<SpinResult[]>([]);
-    
-    const [singleWonItem, setSingleWonItem] = useState<CSGOItem | null>(null);
     const [multiWonItems, setMultiWonItems] = useState<CSGOItem[] | null>(null);
     
     const soundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const spinEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const winnersRef = useRef<CSGOItem[]>([]);
     const reelContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -155,23 +108,6 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
         return currentCase.items[currentCase.items.length - 1];
     }, [currentCase.items]);
     
-    const processWinnings = useCallback((winners: CSGOItem[], isDemo: boolean) => {
-        if (!isMounted.current) return;
-
-        setIsSpinning(false);
-        if (isDemo) {
-            playSound('click');
-            setViewMode('Browsing');
-        } else {
-            playSound('win');
-            if (winners.length === 1) {
-                setSingleWonItem(winners[0]);
-            } else {
-                setMultiWonItems(winners);
-            }
-        }
-    }, [playSound]);
-    
     const handleSpin = useCallback(async (isDemo: boolean) => {
         const totalCost = currentCase.price * caseCount;
         if (isSpinning || (!isDemo && (!profile || profile.balance < totalCost))) return;
@@ -182,12 +118,11 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
         setIsSpinning(true);
         setViewMode('Spinning');
         setMultiWonItems(null);
-        setSingleWonItem(null);
-
-        const winners = Array.from({ length: caseCount }, pickWinningItem);
-        winnersRef.current = winners;
-
-        const newSpinResults: SpinResult[] = winners.map((winner, i) => {
+        
+        const winners: CSGOItem[] = [];
+        const newSpinResults: SpinResult[] = Array.from({ length: caseCount }).map((_, i) => {
+            const winner = pickWinningItem();
+            winners.push(winner);
             const reelLength = 100;
             const winnerIndex = reelLength - 10;
             const newReelItems = Array.from({ length: reelLength }, (_, j) => j === winnerIndex ? winner : pickWinningItem());
@@ -206,7 +141,7 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
             const itemWidth = 144;
             const containerWidth = reelContainerRef.current?.offsetWidth || window.innerWidth;
 
-            setSpinResults(currentResults => currentResults.map((spin, index) => {
+            setSpinResults(currentResults => currentResults.map(spin => {
                 const winnerIndex = 100 - 10;
                 const randomOffset = (Math.random() - 0.5) * (itemWidth * 0.8);
                 const finalPosition = (winnerIndex * itemWidth) - (containerWidth / 2) + (itemWidth / 2) + randomOffset;
@@ -230,43 +165,23 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
                 soundTimeoutRef.current = setTimeout(playTickingSound, nextInterval);
             };
             playTickingSound();
-            
-            spinEndTimerRef.current = setTimeout(() => processWinnings(winners, isDemo), spinDuration);
 
-        }, 100);
-    }, [profile, caseCount, currentCase, isSpinning, adjustBalance, playSound, pickWinningItem, processWinnings]);
-    
-    const handleSkip = useCallback(() => {
-        if (!isSpinning) return;
-
-        if (spinEndTimerRef.current) clearTimeout(spinEndTimerRef.current);
-        if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
-        spinEndTimerRef.current = null;
-        soundTimeoutRef.current = null;
-        
-        // Fast-forward animation
-        const itemWidth = 144;
-        const containerWidth = reelContainerRef.current?.offsetWidth || window.innerWidth;
-        setSpinResults(currentResults => currentResults.map(spin => {
-            const winnerIndex = 100 - 10;
-            const randomOffset = (Math.random() - 0.5) * (itemWidth * 0.8);
-            const finalPosition = (winnerIndex * itemWidth) - (containerWidth / 2) + (itemWidth / 2) + randomOffset;
-            return {
-                ...spin,
-                style: {
-                    transition: 'transform 0.3s ease-out',
-                    transform: `translateX(-${finalPosition}px)`
+            setTimeout(() => {
+                if (!isMounted.current) return;
+                setIsSpinning(false);
+                if (isDemo) {
+                    playSound('click');
+                    setViewMode('Browsing');
+                } else {
+                    setMultiWonItems(winners);
+                    playSound('win');
                 }
-            };
-        }));
-
-        setTimeout(() => processWinnings(winnersRef.current, false), 300);
-
-    }, [isSpinning, processWinnings]);
+            }, spinDuration);
+        }, 100);
+    }, [profile, caseCount, currentCase, isSpinning, adjustBalance, playSound, pickWinningItem]);
 
     const handleModalClose = () => {
         setMultiWonItems(null);
-        setSingleWonItem(null);
         setViewMode('Browsing');
     };
 
@@ -297,10 +212,10 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
                 
                 consolidatedItems.push({
                     ...cheapest,
-                    id: groupId, 
-                    price: cheapest.price,
+                    id: groupId, // Use groupId as a unique key for the consolidated view
+                    price: cheapest.price, // Base price for sorting
                     odds: variants.reduce((sum, v) => sum + v.odds, 0),
-                    imageUrl: mostExpensive.imageUrl,
+                    imageUrl: mostExpensive.imageUrl, // Show the most appealing variant
                     priceRange: cheapest.price === mostExpensive.price ? `$${cheapest.price.toFixed(2)}` : `$${cheapest.price.toFixed(2)} - $${mostExpensive.price.toFixed(2)}`
                 });
             }
@@ -313,9 +228,7 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
 
     return (
         <div className="csgo-v2-page min-h-screen flex flex-col font-poppins select-none overflow-hidden">
-            {singleWonItem && <SingleWinCSGOModal item={singleWonItem} onClose={handleModalClose} />}
             {multiWonItems && <MultiWinCSGOModal items={multiWonItems} onClose={handleModalClose} />}
-
             <header className="shrink-0 w-full bg-[#1a1b2f] p-3 flex items-center justify-between z-10">
                 <div className="flex-1"><button onClick={onBack} aria-label="Back"><ArrowLeftIcon className="w-6 h-6" /></button></div>
                 <h1 className="flex-1 text-teal-400 text-xl font-bold uppercase text-center truncate">{currentCase.name}</h1>
@@ -347,7 +260,6 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
                         </div>
                     ) : (
                          <div ref={reelContainerRef} className="csgo-multi-spinner-container animate-fade-in">
-                            {isSpinning && <button onClick={handleSkip} className="csgo-skip-button">Skip</button>}
                             <div className="csgo-multi-spinner-marker"></div>
                             <div className="csgo-reels-column">
                                 {spinResults.map(spin => (

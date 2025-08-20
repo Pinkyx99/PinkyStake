@@ -1,13 +1,17 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Profile, BoxItem, InventoryItem } from '../types';
+import type { Profile, BoxItem, InventoryItem, CSGOItem, CSGOInventoryItem } from '../types';
 
 interface UserContextType {
   profile: Profile;
   adjustBalance: (amount: number) => void;
+  setBalance: (amount: number) => void;
   updateUsername: (newUsername: string) => Promise<void>;
   redeemCode: (code: string) => Promise<{ success: boolean, message: string }>;
   addToInventory: (item: BoxItem) => void;
   sellFromInventory: (itemId: number) => void;
+  addToCsgoInventory: (items: CSGOItem[]) => void;
+  removeFromCsgoInventory: (instanceIds: string[]) => void;
+  addItemsToCsgoInventory: (items: CSGOItem[]) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,9 +24,10 @@ const PROMO_CODES: Record<string, number> = {
 
 const initialProfile: Profile = {
   username: 'Guest',
-  balance: 5.00,
+  balance: 1000.00,
   usedCodes: [],
   inventory: [],
+  csgoInventory: [],
 };
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -32,6 +37,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(prevProfile => ({
       ...prevProfile,
       balance: prevProfile.balance + amount,
+    }));
+  }, []);
+
+  const setBalance = useCallback((amount: number) => {
+    if (isNaN(amount) || amount < 0) {
+        console.error("Invalid balance amount provided.");
+        return;
+    }
+    setProfile(prevProfile => ({
+      ...prevProfile,
+      balance: amount,
     }));
   }, []);
   
@@ -105,14 +121,49 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+  const addToCsgoInventory = useCallback((items: CSGOItem[]) => {
+      setProfile(prev => {
+          const newItems: CSGOInventoryItem[] = items.map(item => ({
+              ...item,
+              instanceId: `${Date.now()}-${Math.random()}`
+          }));
+          return {
+              ...prev,
+              csgoInventory: [...prev.csgoInventory, ...newItems]
+          };
+      });
+  }, []);
+
+  const removeFromCsgoInventory = useCallback((instanceIds: string[]) => {
+      setProfile(prev => ({
+          ...prev,
+          csgoInventory: prev.csgoInventory.filter(item => !instanceIds.includes(item.instanceId))
+      }));
+  }, []);
+
+  const addItemsToCsgoInventory = useCallback((items: CSGOItem[]) => {
+    const newInventoryItems: CSGOInventoryItem[] = items.map(item => ({
+        ...item,
+        instanceId: `${Date.now()}-${item.id}-${Math.random()}`
+    }));
+    setProfile(prev => ({
+        ...prev,
+        csgoInventory: [...prev.csgoInventory, ...newInventoryItems]
+    }));
+}, []);
+
 
   const value = {
     profile,
     adjustBalance,
+    setBalance,
     updateUsername,
     redeemCode,
     addToInventory,
     sellFromInventory,
+    addToCsgoInventory,
+    removeFromCsgoInventory,
+    addItemsToCsgoInventory,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

@@ -134,4 +134,140 @@ const CSGOGame: React.FC<CSGOGameProps> = ({ setPage, case: currentCase, addToCs
         
         const winners: CSGOItem[] = Array.from({ length: caseCount }, pickWinningItem);
         const newSpinResults: SpinResult[] = winners.map((winner, i) => ({
-            key: Date
+            key: Date.now() + i,
+            reelItems: generateWeightedReel(winner),
+            style: { transform: 'translateX(0px)', transition: 'none' }, 
+            winner
+        }));
+        setSpinResults(newSpinResults);
+
+        setTimeout(() => {
+            if (!isMounted.current) return;
+            const spinDuration = quickSpin ? 200 : 7000;
+            const itemWidth = 144;
+            const containerWidth = reelContainerRef.current?.offsetWidth || window.innerWidth;
+
+            setSpinResults(current => current.map(spin => {
+                const winnerIndex = 90;
+                const finalPosition = (winnerIndex * itemWidth) - (containerWidth / 2) + (itemWidth / 2);
+                return {
+                    ...spin,
+                    style: {
+                        transition: `transform ${spinDuration}ms cubic-bezier(0.2, 0.85, 0.25, 1)`,
+                        transform: `translateX(-${finalPosition}px)`
+                    }
+                };
+            }));
+
+            if (!quickSpin) {
+                if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
+                const startTime = performance.now();
+                const playTickingSound = () => {
+                    if (!isMounted.current || performance.now() - startTime >= spinDuration) { if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current); return; }
+                    playSound('csgo_spinner_tick_v2');
+                    const nextInterval = 80 + (420 * ((performance.now() - startTime) / spinDuration));
+                    soundTimeoutRef.current = setTimeout(playTickingSound, nextInterval);
+                };
+                playTickingSound();
+            }
+
+            setTimeout(() => {
+                if (!isMounted.current) return;
+                setIsSpinning(false);
+                if (isDemo) { playSound('click'); setSpinResults([]); } 
+                else { setMultiWonItems(winners); playSound('win'); }
+            }, spinDuration);
+        }, 100);
+    }, [user, caseCount, currentCase, isSpinning, adjustBalance, playSound, pickWinningItem, quickSpin, generateWeightedReel]);
+
+    const sortedCaseItems = useMemo(() => [...currentCase.items].sort((a,b) => b.price - a.price), [currentCase.items]);
+    const totalCost = currentCase.price * caseCount;
+
+    return (
+        <div className="csgo-page min-h-screen flex flex-col font-poppins text-white select-none">
+            {multiWonItems && <MultiWinCSGOModal items={multiWonItems} onClose={() => { setMultiWonItems(null); setSpinResults([]); }} addToCsgoInventory={addToCsgoInventory} />}
+            <div className="csgo-sub-nav sticky top-0 z-20">
+                <div className="container mx-auto flex items-center justify-between">
+                    <div className="flex items-center">
+                        <button className="csgo-sub-nav-item" onClick={() => setPage({ name: 'lobby' })}>Mini Games</button>
+                        <button className="csgo-sub-nav-item active" onClick={() => setPage({ name: 'csgo-lobby' })}>Cases</button>
+                        <button className="csgo-sub-nav-item" onClick={() => setPage({ name: 'csgo-upgrader' })}>Upgrader</button>
+                        <button className="csgo-sub-nav-item" onClick={() => setPage({ name: 'csgo-battles-lobby' })}>Case Battles</button>
+                    </div>
+                     {profile && (
+                        <div className="flex items-center bg-black/30 rounded-md px-4 py-1">
+                            <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
+                            <span className="text-sm text-gray-400 ml-2">EUR</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+            
+            <div className="csgo-case-open-v5-main container mx-auto my-8">
+                 <div className="flex flex-col md:flex-row items-center gap-8">
+                     <img src={currentCase.imageUrl} alt={currentCase.name} className="w-56 h-56 object-contain"/>
+                     <div className="flex-grow flex flex-col items-center md:items-start gap-4">
+                         <h1 className="text-4xl font-bold">{currentCase.name}</h1>
+                         <div className="csgo-count-selector-v2">
+                            {[1, 2, 3, 4, 5].map(num => <button key={num} onClick={() => !isSpinning && setCaseCount(num)} className={`csgo-count-selector-v2-btn ${caseCount === num ? 'active' : ''}`}>{num}</button>)}
+                         </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                           <button onClick={() => handleSpin(false)} disabled={isSpinning || (user && user.balance < totalCost)} className="csgo-open-button-v5">
+                                Open ({caseCount}) For ${totalCost.toFixed(2)}
+                            </button>
+                            <button onClick={() => handleSpin(true)} disabled={isSpinning} className="px-6 py-3 text-sm font-bold bg-slate-700 hover:bg-slate-600 rounded-md">Demo Spin</button>
+                        </div>
+                        <label className="csgo-quick-spin-label mt-2">
+                            <input type="checkbox" checked={quickSpin} onChange={(e) => setQuickSpin(e.target.checked)} disabled={isSpinning}/>
+                            Quick Spin
+                        </label>
+                     </div>
+                 </div>
+            </div>
+            
+            {spinResults.length > 0 && (
+                 <div ref={reelContainerRef} className="w-full py-4 space-y-2">
+                    {spinResults.map((result) => (
+                        <div key={result.key} className="relative w-full overflow-hidden h-40 csgo-spinner-v3 csgo-spinner-marker-v4-container">
+                            <div className="csgo-spinner-marker-v4-top"></div>
+                            <div className="csgo-spinner-marker-v4-bottom"></div>
+                            <div className={`csgo-reel absolute inset-0 flex items-center gap-4 ${isSpinning ? 'is-spinning' : ''}`} style={result.style}>
+                                {result.reelItems.map((item, i) => (
+                                     <div key={i} className="case-item-card shrink-0 w-36" style={{'--rarity-color': RARITY_COLORS[item.rarity]} as React.CSSProperties}>
+                                        <div className="h-24 flex items-center justify-center p-2">
+                                            <img src={item.imageUrl} alt={item.skin} className={`max-w-full max-h-full object-contain rarity-glow-${item.rarity}`}/>
+                                        </div>
+                                        <div className="mt-auto text-center">
+                                            <p className={`text-xs font-bold text-rarity-${item.rarity} truncate`}>{item.skin}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            
+            <section className="container mx-auto px-4 py-8">
+                 <h2 className="text-2xl font-bold text-center mb-6">Case Contents</h2>
+                 <div className="case-contents-grid-v2">
+                    {sortedCaseItems.map(item => (
+                         <div key={item.id} className="case-item-card-v2" style={{'--rarity-color': RARITY_COLORS[item.rarity]} as React.CSSProperties}>
+                            <div className="absolute top-1 right-1 text-xs font-bold text-gray-400 bg-black/50 px-1.5 py-0.5 rounded">{item.odds.toFixed(2)}%</div>
+                            <div className="h-28 flex items-center justify-center p-2">
+                                <img src={item.imageUrl} alt={item.skin} className={`max-w-full max-h-full object-contain rarity-glow-${item.rarity}`} />
+                            </div>
+                            <div className="mt-auto">
+                                <p className="text-sm text-gray-300 truncate">{item.weapon}</p>
+                                <p className={`text-sm font-bold text-rarity-${item.rarity} truncate`}>{item.skin}</p>
+                                <p className="text-sm font-bold text-green-400">${item.price.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
+};
+
+export default CSGOGame;

@@ -1,6 +1,11 @@
 import { useRef, useCallback } from 'react';
 
-type SoundType = 'click' | 'pump' | 'pop' | 'win' | 'reveal' | 'tick' | 'deal' | 'cashout' | 'lose' | 'bet' | 'spin_tick' | 'blackjack_win' | 'roulette_win' | 'doors_win' | 'flip_spin' | 'flip_win';
+type SoundType = 'click' | 'pump' | 'pop' | 'win' | 'reveal' | 'tick' | 'deal' | 'cashout' | 'lose' | 'bet' | 'spin_tick' | 'blackjack_win' | 'roulette_win' | 'doors_win' | 'flip_spin' | 'flip_win' | 'crash_launch' | 'crash_tick' | 'crash_explode' | 'csgo_tick' | 'csgo_spinner_tick_v2' | 'plinko_hit';
+
+interface SoundOptions {
+    pitch?: number;
+    progress?: number; // for sounds that change over time, e.g. 0.0 to 1.0
+}
 
 export const useSound = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -28,7 +33,7 @@ export const useSound = () => {
         }
     }, []);
 
-    const playSound = useCallback((type: SoundType) => {
+    const playSound = useCallback((type: SoundType, options?: SoundOptions) => {
         initAudioContext();
         const ctx = audioContextRef.current;
         if (!ctx) return;
@@ -42,6 +47,30 @@ export const useSound = () => {
         gain.connect(ctx.destination);
         
         switch (type) {
+            case 'csgo_spinner_tick_v2': {
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600 + Math.random() * 50, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+                osc.connect(gain);
+                osc.start(now);
+                osc.stop(now + 0.08);
+                break;
+            }
+            case 'csgo_tick': {
+                 gain.gain.setValueAtTime(0.2, now);
+                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                 const osc = ctx.createOscillator();
+                 osc.type = 'square';
+                 osc.frequency.setValueAtTime(800 + Math.random() * 200, now);
+                 osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                 osc.connect(gain);
+                 osc.start(now);
+                 osc.stop(now + 0.1);
+                 break;
+            }
             case 'click': {
                 gain.gain.setValueAtTime(0.3, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
@@ -135,60 +164,43 @@ export const useSound = () => {
             }
              case 'lose': {
                 const osc1 = ctx.createOscillator();
-                const osc2 = ctx.createOscillator();
-                osc1.type = osc2.type = 'sawtooth';
-                
+                osc1.type = 'sawtooth';
                 osc1.frequency.setValueAtTime(150, now);
-                osc2.frequency.setValueAtTime(155, now);
                 osc1.frequency.exponentialRampToValueAtTime(50, now + 0.4);
-                osc2.frequency.exponentialRampToValueAtTime(50, now + 0.4);
                 
-                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.setValueAtTime(0.3, now); // reduced volume
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
                 osc1.connect(gain);
-                osc2.connect(gain);
-                
                 osc1.start(now);
-                osc2.start(now);
                 osc1.stop(now + 0.4);
-                osc2.stop(now + 0.4);
                 break;
             }
             case 'win': {
-                const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
                 notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     osc.type = 'triangle';
                     osc.frequency.value = freq;
                     const noteGain = ctx.createGain();
-                    noteGain.gain.setValueAtTime(0.4, now + i * 0.1);
-                    noteGain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.2);
+                    noteGain.gain.setValueAtTime(0.4, now + i * 0.08);
+                    noteGain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
                     osc.connect(noteGain).connect(ctx.destination);
-                    osc.start(now + i * 0.1);
-                    osc.stop(now + i * 0.1 + 0.2);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.25);
                 });
                 break;
             }
-            case 'reveal': {
+            case 'reveal': { // Gem/Chicken reveal
                 const osc = ctx.createOscillator();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(500, now);
-                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
-
-                const vibrato = ctx.createOscillator();
-                vibrato.frequency.value = 15;
-                const vibratoGain = ctx.createGain();
-                vibratoGain.gain.value = 10;
-                vibrato.connect(vibratoGain).connect(osc.frequency);
-
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
                 osc.connect(gain);
-                vibrato.start(now);
                 osc.start(now);
-                vibrato.stop(now + 0.2);
-                osc.stop(now + 0.2);
+                osc.stop(now + 0.15);
                 break;
             }
             case 'tick': {
@@ -256,40 +268,18 @@ export const useSound = () => {
                 sparkle.stop(now + 0.2);
                 break;
             }
-            case 'spin_tick': {
+            case 'spin_tick': { // Roulette Tick
                 const osc = ctx.createOscillator();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(1300, now);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+                osc.type = 'square';
+                // Use progress to decrease pitch over time
+                const progress = options?.progress ?? 0.5; // Default to mid-spin
+                const freq = 1000 + (1000 * progress);
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.2 * progress, now); // also decrease volume
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
                 osc.connect(gain);
                 osc.start(now);
-                osc.stop(now + 0.03);
-                break;
-            }
-            case 'blackjack_win': { // Richer chip shuffle
-                for (let i = 0; i < 5; i++) {
-                    const timeOffset = now + i * 0.06 + Math.random() * 0.02;
-                    const noise = ctx.createBufferSource();
-                    const bufferSize = ctx.sampleRate * 0.06;
-                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let j = 0; j < bufferSize; j++) data[j] = Math.random() * 2 - 1;
-                    noise.buffer = buffer;
-
-                    const filter = ctx.createBiquadFilter();
-                    filter.type = 'bandpass';
-                    filter.frequency.value = 1500 + Math.random() * 1500;
-                    filter.Q.value = 5 + Math.random() * 5;
-                    
-                    const noteGain = ctx.createGain();
-                    noteGain.gain.setValueAtTime(0.3, timeOffset);
-                    noteGain.gain.exponentialRampToValueAtTime(0.001, timeOffset + 0.1);
-
-                    noise.connect(filter).connect(noteGain).connect(ctx.destination);
-                    noise.start(timeOffset);
-                    noise.stop(timeOffset + 0.1);
-                }
+                osc.stop(now + 0.04);
                 break;
             }
             case 'roulette_win': {
@@ -317,29 +307,31 @@ export const useSound = () => {
                 });
                 break;
             }
-            case 'doors_win': {
-                const createShimmer = (freq: number, delay: number) => {
+            case 'doors_win': { // Magical portal sound
+                const createShimmer = (freq: number, delay: number, pan: number) => {
                     const osc = ctx.createOscillator();
-                    osc.type = 'sine';
-                    const vibrato = ctx.createOscillator();
-                    vibrato.frequency.value = 10;
-                    const vibratoGain = ctx.createGain();
-                    vibratoGain.gain.value = 15;
-                    vibrato.connect(vibratoGain).connect(osc.frequency);
+                    osc.type = 'sawtooth';
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.Q.value = 20;
+                    filter.frequency.setValueAtTime(freq, now + delay);
+                    filter.frequency.exponentialRampToValueAtTime(freq * 3, now + delay + 0.8);
                     
-                    osc.frequency.setValueAtTime(freq, now + delay);
-                    osc.frequency.exponentialRampToValueAtTime(freq * 2, now + delay + 0.5);
-                    gain.gain.setValueAtTime(0.4, now + delay);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.6);
+                    const panner = ctx.createStereoPanner();
+                    panner.pan.value = pan;
+
+                    const noteGain = ctx.createGain();
+                    noteGain.gain.setValueAtTime(0.001, now + delay);
+                    noteGain.gain.linearRampToValueAtTime(0.3, now + delay + 0.1);
+                    noteGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.8);
                     
-                    osc.connect(gain);
-                    vibrato.start(now + delay);
+                    osc.connect(filter).connect(noteGain).connect(panner).connect(ctx.destination);
                     osc.start(now + delay);
-                    vibrato.stop(now + delay + 0.6);
-                    osc.stop(now + delay + 0.6);
+                    osc.stop(now + delay + 0.8);
                 }
-                createShimmer(880, 0); // A5
-                createShimmer(880 * 1.05, 0.05); // slightly detuned A5
+                createShimmer(800, 0, -0.5);
+                createShimmer(1000, 0.1, 0.5);
+                createShimmer(1200, 0.2, 0);
                 break;
             }
             case 'flip_spin': {
@@ -382,6 +374,56 @@ export const useSound = () => {
                 osc2.start(now);
                 osc1.stop(now + 0.3);
                 osc2.stop(now + 0.3);
+                break;
+            }
+            case 'crash_tick': {
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                const pitch = Math.min(2000, 600 + (options?.pitch ?? 1) * 5);
+                osc.frequency.setValueAtTime(pitch, now);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain);
+                osc.start(now);
+                osc.stop(now + 0.08);
+                break;
+            }
+            case 'crash_explode': {
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(0.8, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                const noise = ctx.createBufferSource();
+                const bufferSize = ctx.sampleRate * 0.5;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                noise.buffer = buffer;
+                const lowpass = ctx.createBiquadFilter();
+                lowpass.type = "lowpass";
+                lowpass.frequency.setValueAtTime(2000, now);
+                lowpass.frequency.exponentialRampToValueAtTime(100, now + 0.5);
+                
+                const thump = ctx.createOscillator();
+                thump.type = 'sine';
+                thump.frequency.setValueAtTime(120, now);
+                thump.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+
+                noise.connect(lowpass).connect(gain);
+                thump.connect(gain);
+                noise.start(now); thump.start(now);
+                noise.stop(now + 0.5); thump.stop(now + 0.2);
+                break;
+            }
+            case 'plinko_hit': {
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800 + Math.random() * 200, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                osc.connect(gain);
+                osc.start(now);
+                osc.stop(now + 0.1);
                 break;
             }
         }

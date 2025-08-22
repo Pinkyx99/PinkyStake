@@ -1,5 +1,5 @@
 {
-  "name": "mystake-mini-games-clone",
+  "name": "copy-of-copy-of-copy-of-copy-of-copy-of-copy-v999-almost-csgofinalaaa-comand-adminalmost-supabase-of-mystake-mini-games-clone",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,12 +11,13 @@
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "@supabase/supabase-js": "^2.45.0",
+    "firebase": "^12.1.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.3.1",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "@radix-ui/react-label": "^2.1.7",
-    "@google/genai": "^1.15.0",
     "@radix-ui/react-select": "^2.2.6"
   },
   "devDependencies": {

@@ -4,12 +4,13 @@
     "react/": "https://esm.sh/react@^19.1.1/",
     "react": "https://esm.sh/react@^19.1.1",
     "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0",
+    "firebase/": "https://esm.sh/firebase@^12.1.0/",
     "clsx": "https://esm.sh/clsx@^2.1.1",
     "tailwind-merge": "https://esm.sh/tailwind-merge@^3.3.1",
     "@radix-ui/react-slot": "https://esm.sh/@radix-ui/react-slot@^1.2.3",
     "class-variance-authority": "https://esm.sh/class-variance-authority@^0.7.1",
     "@radix-ui/react-label": "https://esm.sh/@radix-ui/react-label@^2.1.7",
-    "@google/genai": "https://esm.sh/@google/genai@^1.15.0",
     "@radix-ui/react-select": "https://esm.sh/@radix-ui/react-select@^2.2.6"
   }
 }
@@ -20,603 +21,640 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PinkyStake Mini Games</title>
+    <title>Supabase Casino</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700;800&display=swap');
-      :root {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-      }
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Fira+Code:wght@400;600&display=swap');
       body {
         font-family: 'Poppins', sans-serif;
-        background-color: var(--background);
+        background-color: #1a1d3a;
+        color: #e2e8f0;
       }
-      .font-bebas {
-        font-family: 'Bebas Neue', cursive;
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+      
+      /* --- Interactive Game Card Styles --- */
       .interactive-card {
-        transform: scale(var(--scale, 1)) rotateX(var(--rotate-x, 0)) rotateY(var(--rotate-y, 0));
-        transition: transform 0.2s ease;
-        transform-style: preserve-3d;
+          transform-style: preserve-3d;
+          transform: scale(var(--scale, 1)) rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg));
+          transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+          will-change: transform;
+      }
+      .interactive-card.is-active {
+          transition-duration: 0.1s;
       }
       .card-image-wrapper {
-        transform: translateZ(20px) translateX(var(--image-x, 0)) translateY(var(--image-y, 0));
-        transition: transform 0.2s ease;
-      }
-      .card-title-wrapper {
-        transform: translateZ(50px) translateX(var(--title-x, 0)) translateY(var(--title-y, 0));
-        transition: transform 0.2s ease;
+          transform-style: preserve-3d;
+          transform: translateZ(30px) translateX(var(--image-x, 0px)) translateY(var(--image-y, 0px));
+          transition: transform 0.2s ease-out;
       }
       .card-shine {
-        position: absolute;
-        top: 0;
-        left: 0;
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          border-radius: 1rem; /* rounded-2xl */
+          background: radial-gradient(
+              circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+              rgba(255, 255, 255, 0.35) 0%,
+              rgba(255, 255, 255, 0) 50%
+          );
+          opacity: var(--shine-opacity, 0);
+          transition: opacity 0.2s ease;
+      }
+
+      /* --- Chicken Game Styles --- */
+      .tile {
+        perspective: 1000px;
+      }
+      .tile-inner {
+        position: relative;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255, 255, 255, 0.3), transparent 40%);
-        opacity: var(--shine-opacity, 0);
-        transition: opacity 0.2s ease;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
       }
-      @keyframes particle-roam {
-        0% { transform: translateY(0) translateX(0); opacity: 1; }
-        100% { transform: translateY(110vh) translateX(var(--drift)); opacity: 0; }
+      .tile.revealed .tile-inner {
+        transform: rotateY(180deg);
       }
-      .animate-particle-roam {
-        animation: particle-roam linear infinite;
-      }
-      .text-glow-purple {
-        text-shadow: 0 0 8px rgba(192, 132, 252, 0.6), 0 0 20px rgba(192, 132, 252, 0.4);
-      }
-      @keyframes title-glow {
-        0%, 100% { text-shadow: 0 0 10px #fde047, 0 0 20px #fde047; }
-        50% { text-shadow: 0 0 20px #facc15, 0 0 40px #facc15; }
-      }
-      .animate-title-glow {
-        animation: title-glow 2s ease-in-out infinite;
-      }
-      @keyframes glow-pulse {
-        0%, 100% { box-shadow: 0 0 10px 0px rgba(250, 204, 21, 0.5); }
-        50% { box-shadow: 0 0 20px 5px rgba(250, 204, 21, 0.7); }
-      }
-      .animate-glow-pulse {
-        animation: glow-pulse 2s infinite;
-      }
-      
-      /* Chicken Game Styles */
-      .tile { perspective: 1000px; }
-      .tile-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
-      .tile.revealed .tile-inner { transform: rotateY(180deg); }
-      .tile-front, .tile-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-      .tile-back { transform: rotateY(180deg); }
-      @keyframes chicken-reveal { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-      .animate-chicken-reveal { animation: chicken-reveal 0.3s ease-out; }
-      @keyframes bone-reveal { from { transform: scale(0.5) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
-      .animate-bone-reveal { animation: bone-reveal 0.3s ease-out; }
-
-      /* Mines Game Styles */
-      .mines-tile { perspective: 1000px; }
-      .mines-tile-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
-      .mines-tile.revealed .mines-tile-inner { transform: rotateY(180deg); }
-      .mines-tile-front, .mines-tile-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-      .mines-tile-back { transform: rotateY(180deg); }
-      @keyframes gem-reveal { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-      .animate-gem-reveal { animation: gem-reveal 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
-      @keyframes mine-reveal { 
-        0% { transform: scale(0.5); opacity: 0; } 
-        50% { transform: scale(1.2) rotate(15deg); }
-        100% { transform: scale(1) rotate(0); opacity: 1; } 
-      }
-      .animate-mine-reveal { animation: mine-reveal 0.4s ease-out; }
-
-      /* --- CSGO Upgrader V7 (Gauge Redesign) Styles --- */
-      @keyframes upgrader-bg-flow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes upgrader-fail-shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-3px); }
-        50% { transform: translateX(3px); }
-        75% { transform: translateX(-3px); }
-      }
-      .upgrader-page {
-        position: relative;
-        min-height: 100vh;
-        background-color: #111827;
-        background-image: linear-gradient(45deg, #111827 0%, #1e293b 50%, #111827 100%);
-        background-size: 200% 200%;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 1rem;
-        box-sizing: border-box;
-        overflow-x: hidden;
-        animation: upgrader-bg-flow 15s ease infinite;
-      }
-      .upgrader-page.success::before {
-        content: ''; position: absolute; inset: 0;
-        background: radial-gradient(circle, rgba(74, 222, 128, 0.15) 0%, transparent 70%); /* Green glow */
-        animation: upgrader-success-fade 0.8s ease-out;
-      }
-      .upgrader-page.failure::before {
-        content: ''; position: absolute; inset: 0;
-        background: radial-gradient(circle, rgba(220, 53, 69, 0.15) 0%, transparent 70%);
-         animation: upgrader-success-fade 0.8s ease-out;
-      }
-      .upgrader-page.failure .upgrade-machine { animation: upgrader-fail-shake 0.3s linear; }
-      @keyframes upgrader-success-fade { from { opacity: 1; } to { opacity: 0; } }
-
-      .upgrade-machine {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 2rem;
-        width: 100%;
-        max-width: 1100px;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-      }
-      .item-slot {
-        width: 250px;
-        height: 250px;
-        background-color: rgba(0,0,0,0.2);
-        border: 2px solid #374151;
-        border-radius: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        flex-direction: column;
-        gap: 0.5rem;
-        text-align: center;
-        transition: all 0.3s ease;
-      }
-      .item-slot-inner img { max-width: 80%; max-height: 150px; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
-
-      .item-slot-inner-multi {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.25rem;
-        width: 180px;
-        height: 180px;
-        align-items: center;
-        justify-content: center;
-      }
-      .multi-item-img {
-        width: 55px;
-        height: 55px;
-        object-fit: contain;
-        background: rgba(0,0,0,0.3);
-        border-radius: 4px;
-        padding: 2px;
-      }
-      .multi-item-more {
-        width: 55px;
-        height: 55px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 0.875rem;
-        color: #9ca3af;
-        background-color: rgba(0,0,0,0.3);
-        border-radius: 4px;
-      }
-      
-      .upgrade-gauge { position: relative; width: 250px; height: 250px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0.5rem; }
-      .gauge-pointer {
+      .tile-front, .tile-back {
         position: absolute;
-        top: -8px; /* Position it just above the circle's edge */
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 10px solid transparent;
-        border-right: 10px solid transparent;
-        border-top: 15px solid #facc15; /* Yellow pointer */
-        z-index: 10;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
       }
-      .gauge-svg-container {
-        width: 100%; height: 100%;
-        transition: transform 6s cubic-bezier(0.2, 1, 0.25, 1);
+      .tile-back {
+        transform: rotateY(180deg);
       }
-      .gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-      .gauge-svg circle { fill: none; stroke-width: 14; }
-      .gauge-bg-arc { stroke: #374151; }
-      .gauge-win-arc { stroke: #facc15; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease-out; }
+      @keyframes chicken-reveal {
+          from { transform: scale(0.5); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+      }
+      .animate-chicken-reveal {
+          animation: chicken-reveal 0.3s ease-out 0.3s backwards;
+      }
+      @keyframes bone-reveal {
+          0% { transform: scale(0.8) rotate(10deg); opacity: 0; }
+          50% { transform: scale(1.2) rotate(-15deg); }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+      }
+      .animate-bone-reveal {
+          animation: bone-reveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards;
+      }
+
+      /* --- Doors Game Styles --- */
+      .doors-camera-container {
+          flex-grow: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          perspective: 1200px;
+          position: relative;
+          overflow: hidden;
+      }
+      .doors-camera {
+          position: relative;
+          transform-style: preserve-3d;
+          will-change: transform, opacity;
+      }
+      .doors-scroll-wrapper {
+          transform-style: preserve-3d;
+          width: 100%;
+          display: flex;
+          justify-content: center;
+      }
+      .doors-grid {
+          display: flex;
+          gap: 1.5rem; /* 24px */
+          padding: 1rem;
+          justify-content: center;
+          transform-style: preserve-3d;
+      }
+      .door-container {
+          width: 110px;
+          height: 180px;
+          position: relative;
+          perspective: 1000px;
+          transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+      @media (max-width: 768px) {
+          .door-container {
+              width: 90px;
+              height: 150px;
+          }
+      }
+      .door-container.faded-out {
+          opacity: 0.3;
+          transform: scale(0.95);
+      }
+      .door-leaf {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+          transform-origin: left;
+      }
+      .door-front-face, .door-back-face, .door-wall-behind {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          border-radius: 0.375rem; /* rounded-md */
+      }
+      .door-back-face {
+          transform: rotateY(180deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+      .door-wall-behind {
+        transform: translateZ(-2px);
+      }
+      .portal-glow-effect {
+          position: absolute;
+          top: 50%; left: 50%;
+          width: 150%; height: 150%;
+          background: radial-gradient(circle, rgba(250, 204, 21, 0.5) 0%, rgba(250, 204, 21, 0) 60%);
+          transform: translate(-50%, -50%);
+          animation: portal-pulse 2s infinite ease-in-out;
+      }
+      @keyframes portal-pulse {
+        0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(0.9); }
+        50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      }
+      .animate-swing { animation: swing-open 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      @keyframes swing-open {
+        from { transform: rotateY(0deg); }
+        to { transform: rotateY(-160deg); }
+      }
+      .animate-thud { animation: thud-shake 0.5s cubic-bezier(.36,.07,.19,.97) forwards; }
+      @keyframes thud-shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+      }
+      .animate-screen-shake-subtle { animation: screen-shake-subtle 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+      @keyframes screen-shake-subtle {
+        10%, 90% { transform: translate3d(-0.5px, 0, 0); }
+        20%, 80% { transform: translate3d(1px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-1.5px, 0, 0); }
+        40%, 60% { transform: translate3d(1.5px, 0, 0); }
+      }
+      .animate-treasure-glow { animation: treasure-glow 2.5s infinite ease-in-out; }
+      @keyframes treasure-glow {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+      }
+       .animate-pulse-once { animation: pulse-once 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
+       @keyframes pulse-once {
+        0% { transform: scale(0.9); opacity: 0.5; }
+        50% { transform: scale(1.05); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+       }
+      .doors-multiplier-panel { text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+      .doors-multiplier-text { text-shadow: 0 0 15px currentColor; }
+
+      /* --- Roulette Game Styles --- */
+      @keyframes roulette-wheel-spin-final {
+        from { transform: rotate(var(--wheel-start-angle)); }
+        to { transform: rotate(var(--wheel-final-angle)); }
+      }
+      @keyframes roulette-ball-orbit-and-fade {
+        0% { transform: rotate(var(--ball-orbit-start-angle)) scale(1); opacity: 1; }
+        90% { transform: rotate(var(--ball-orbit-angle)) scale(1); opacity: 1; }
+        100% { transform: rotate(var(--ball-orbit-angle)) scale(0); opacity: 0; }
+      }
+      @keyframes roulette-ball-settle-in-pocket {
+        0% { transform: translateY(0) scale(1.2); }
+        25% { transform: translateY(18px) scale(1); }
+        50% { transform: translateY(15px) scale(1.05); }
+        75% { transform: translateY(20px) scale(0.98); }
+        100% { transform: translateY(20px) scale(1); }
+      }
+
+      /* --- Keno Game Styles --- */
+       @keyframes keno-draw {
+        from { transform: scale(0.5) rotate(-180deg); opacity: 0; }
+        to { transform: scale(1) rotate(0deg); opacity: 1; }
+      }
+      @keyframes keno-hit {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 15px 5px var(--tw-shadow-color); }
+        50% { transform: scale(1.15); box-shadow: 0 0 25px 10px var(--tw-shadow-color); }
+      }
+      .keno-number {
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        border-radius: 0.375rem;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+      }
+      .keno-number:not(:disabled):hover { transform: scale(1.1); }
+      .animate-keno-draw { animation: keno-draw 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      .animate-keno-hit { 
+        animation: keno-hit 0.5s ease-in-out forwards; 
+        --tw-shadow-color: theme(colors.green.500);
+        box-shadow: 0 0 15px 5px var(--tw-shadow-color);
+      }
       
-      .gauge-inner {
-        position: absolute; width: 190px; height: 190px;
-        background-color: #111827; border-radius: 50%;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      /* --- Plinko Game Styles --- */
+      .plinko-board {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0 auto;
       }
-      .gauge-chance-percent {
-        font-size: 2.5rem; /* 40px */
-        font-weight: 800;
+      .plinko-row {
+        display: flex;
+        justify-content: center;
+      }
+      .plinko-peg {
+        width: 12px;
+        height: 12px;
+        background-color: #4a5568;
+        border-radius: 50%;
+        margin: 18px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 2px 3px rgba(255,255,255,0.1);
+        transition: background-color 0.1s;
+      }
+      .plinko-peg.hit {
+        background-color: #fde047;
+        transform: scale(1.2);
+        box-shadow: 0 0 10px #fde047;
+      }
+      .plinko-ball {
+        position: absolute;
+        top: -20px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        z-index: 10;
+        will-change: transform;
+      }
+      @keyframes plinko-path-animation {
+        /* Keyframes will be injected here */
+      }
+      .plinko-multiplier-row {
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
+      }
+      .plinko-multiplier-box {
+        width: 56px;
+        height: 40px;
+        margin: 0 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.8rem;
         color: white;
+        border-radius: 4px;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .plinko-multiplier-box.landed {
+        transform: scale(1.1);
+        box-shadow: 0 0 20px currentColor;
+      }
+      .plinko-history-bar {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background-color: rgba(0,0,0,0.2);
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .plinko-history-item {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+      }
+
+      /* --- Win Animation --- */
+      .win-animation-container {
+        position: fixed; inset: 0;
+        background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 1000;
+        font-family: 'Poppins', sans-serif;
+        animation: win-fade-in 0.3s ease-out forwards;
+        cursor: pointer;
+      }
+      .win-animation-container.exiting {
+        animation: win-fade-out 0.5s ease-in forwards;
+      }
+      @keyframes win-fade-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes win-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+      .win-animation-content {
+        position: relative;
+        cursor: default;
+        text-align: center;
+        background: radial-gradient(circle, #2a2357 0%, #1a1d3a 100%);
+        border: 2px solid #a78bfa;
+        box-shadow: 0 0 40px 10px rgba(167, 139, 250, 0.3), inset 0 0 20px rgba(167, 139, 250, 0.15);
+        border-radius: 1rem;
+        padding: 2rem 4rem;
+        animation: win-scale-bounce 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+      @keyframes win-scale-bounce {
+        0% { transform: scale(0.6) rotate(-5deg); opacity: 0; }
+        70% { transform: scale(1.05) rotate(2deg); opacity: 1; }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      }
+      .win-animation-container.exiting .win-animation-content {
+        animation: win-scale-out 0.5s ease-in forwards;
+      }
+      @keyframes win-scale-out {
+        from { transform: scale(1); opacity: 1; }
+        to { transform: scale(0.8); opacity: 0; }
+      }
+
+      .win-animation-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #d1d5db;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      .win-animation-amount {
+        font-size: 4.5rem;
+        font-weight: 800;
+        color: #fde047;
+        text-shadow: 0 0 8px #fde047, 0 0 20px #f59e0b, 0 0 40px rgba(245, 158, 11, 0.7);
+        margin-top: 0.5rem;
         line-height: 1.1;
       }
-      .gauge-chance-label {
-        font-size: 1rem; /* 16px */
-        font-weight: 600;
-        color: #9ca3af; /* gray-400 */
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+
+      .confetti-container { position: absolute; top: 50%; left: 50%; width: 1px; height: 1px; transform: translate(-50%, -50%); pointer-events: none; }
+      .confetti {
+          position: absolute;
+          width: 8px;
+          height: 8px;
+          border-radius: 4px;
+          opacity: 0;
+          animation: confetti-pop 1.8s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+      }
+      @keyframes confetti-pop {
+        0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+        100% { transform: translate(var(--x-end), var(--y-end)) rotate(720deg) scale(0); opacity: 0; }
       }
       
-      @keyframes ready-pulse {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 10px #facc1580; }
-        50% { transform: scale(1.05); box-shadow: 0 0 20px #facc15; }
+      /* --- CSGO Redesign V4/V5/V6 --- */
+      :root {
+        --rarity-mil-spec: #3b82f6; --rarity-restricted: #8b5cf6; --rarity-classified: #ec4899;
+        --rarity-covert: #ef4444; --rarity-contraband: #f97316; --rarity-extraordinary: #f59e0b;
+        --rarity-consumer: #d1d5db; --rarity-industrial: #60a5fa;
       }
-      .upgrade-button {
-        padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: bold; text-transform: uppercase;
-        cursor: pointer; transition: all 0.2s; border: none;
-      }
-      .upgrade-button.ready {
-        background-color: #facc15; color: #111827; /* Yellow */
-        animation: ready-pulse 2s infinite;
-      }
-      .upgrade-button.ready:hover { background-color: #f59e0b; animation-play-state: paused; }
-      .upgrade-button:disabled { background-color: #4b5569; color: #9ca3af; cursor: not-allowed; }
+      .text-rarity-Mil-Spec { color: var(--rarity-mil-spec); }
+      .text-rarity-Restricted { color: var(--rarity-restricted); }
+      .text-rarity-Classified { color: var(--rarity-classified); }
+      .text-rarity-Covert { color: var(--rarity-covert); }
+      .text-rarity-Contraband { color: var(--rarity-contraband); }
+      .text-rarity-Extraordinary { color: var(--rarity-extraordinary); }
+      .text-rarity-Consumer { color: var(--rarity-consumer); }
+      .text-rarity-Industrial { color: var(--rarity-industrial); }
+      .rarity-glow-Mil-Spec { filter: drop-shadow(0 0 8px var(--rarity-mil-spec)); }
+      .rarity-glow-Restricted { filter: drop-shadow(0 0 8px var(--rarity-restricted)); }
+      .rarity-glow-Classified { filter: drop-shadow(0 0 8px var(--rarity-classified)); }
+      .rarity-glow-Covert { filter: drop-shadow(0 0 8px var(--rarity-covert)); }
+      .rarity-glow-Contraband { filter: drop-shadow(0 0 8px var(--rarity-contraband)); }
+      .rarity-glow-Extraordinary { filter: drop-shadow(0 0 8px var(--rarity-extraordinary)); }
+      .rarity-glow-Consumer { filter: drop-shadow(0 0 8px var(--rarity-consumer)); }
+      .rarity-glow-Industrial { filter: drop-shadow(0 0 8px var(--rarity-industrial)); }
+      @keyframes fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      .animate-fade-in-up { animation: fade-in-up 0.5s ease forwards; }
+
+      .csgo-page { background-color: #0d1118; color: #e5e7eb; }
+      .csgo-sub-nav { background-color: #161a22; border-bottom: 1px solid #2d343e; }
+      .csgo-sub-nav-item { padding: 1rem 1.5rem; font-weight: 600; color: #9ca3af; border-bottom: 3px solid transparent; transition: all 0.2s ease; }
+      .csgo-sub-nav-item:hover { color: #fff; background-color: #2d343e; }
+      .csgo-sub-nav-item.active { color: #facc15; border-bottom-color: #facc15; }
       
-      .multiplier-filters { display: flex; justify-content: center; gap: 0.75rem; width: 100%; margin-top: 0.5rem; margin-bottom: 0.75rem; }
-      .multiplier-btn {
-        background-color: #374151; color: #d1d5db; border: 2px solid transparent;
-        padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer;
-        transition: all 0.2s ease;
+      .csgo-case-card-v3 { background: #161a22; border: 1px solid #2d343e; border-radius: 0.5rem; padding: 1rem; transition: all 0.2s ease; cursor: pointer; }
+      .csgo-case-card-v3:hover { transform: translateY(-4px); border-color: #facc15; }
+
+      /* Case Open V5 */
+      .csgo-case-open-v5-main { padding: 2.5rem; background-color: #161a22; border-radius: 0.5rem; max-width: 1100px; }
+      .case-contents-grid-v2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+      .case-item-card-v2 { background-color: #0d1118; border: 1px solid #2d343e; border-radius: 0.5rem; padding: 0.75rem; text-align: center; position: relative; overflow: hidden; transition: all 0.2s ease; }
+      .case-item-card-v2:hover { transform: translateY(-4px); border-color: #facc15; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+
+      .csgo-open-button-v5 { background: linear-gradient(to right, #facc15, #f59e0b); color: #161a22; font-weight: 800; font-size: 1.35rem; padding: 1.1rem 2.8rem; border-radius: 0.5rem; transition: all 0.2s ease; }
+      .csgo-open-button-v5:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 20px #facc15; }
+      .csgo-open-button-v5:disabled { background: #4b5563; color: #9ca3af; cursor: not-allowed; }
+      .battle-spinner-compact .csgo-reel-item { width: 108px !important; }
+      
+      .csgo-spinner-v3 { background: linear-gradient(to right, transparent, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, transparent); }
+      .csgo-spinner-marker-v4-container { position: relative; }
+      .csgo-spinner-marker-v4-top, .csgo-spinner-marker-v4-bottom {
+          position: absolute; left: 50%; transform: translateX(-50%);
+          width: 0; height: 0;
+          border-left: 10px solid transparent; border-right: 10px solid transparent;
+          z-index: 10; filter: drop-shadow(0 0 5px #facc15);
       }
-      .multiplier-btn:hover:not(:disabled) { background-color: #4b5569; color: white; }
-      .multiplier-btn.active { background-color: #fde047; color: #111827; border-color: #facc15; }
-      .multiplier-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .csgo-spinner-marker-v4-top { top: -5px; border-top: 10px solid #facc15; }
+      .csgo-spinner-marker-v4-bottom { bottom: -5px; border-bottom: 10px solid #facc15; }
 
-      .inventory-section { display: flex; gap: 1rem; width: 100%; max-width: 1200px; height: 350px; flex-grow: 1; }
-      .inventory-panel { flex: 1; background-color: #1f2937; border-radius: 0.5rem; padding: 0.75rem; display: flex; flex-direction: column; }
-      .inventory-grid {
-        flex-grow: 1; overflow-y: auto; display: grid;
-        grid-template-columns: repeat(auto-fill, 130px);
-        justify-content: center;
-        gap: 0.75rem; padding-right: 0.5rem;
+      .csgo-reel.is-spinning .case-item-card {
+        filter: blur(1px);
+        opacity: 0.8;
+        transform: scale(0.95);
+        transition: filter 0.3s ease-in, opacity 0.3s ease-in, transform 0.3s ease-in;
       }
-      .inventory-grid::-webkit-scrollbar { width: 4px; }
-      .inventory-grid::-webkit-scrollbar-thumb { background-color: #4b5569; border-radius: 4px; }
-
-      .skin-card {
-        background: radial-gradient(circle at 50% 0%, #334155, #0f172a 80%);
-        border: 2px solid #374151; border-radius: 0.5rem; padding: 0.5rem;
-        transition: all 0.2s; display: flex; flex-direction: column; align-items: center;
-        text-align: center; position: relative; height: 160px; /* Fixed height */
-      }
-      .skin-card:hover { transform: translateY(-2px); border-color: #6b7280; }
-      .skin-card.selected { border-color: #4ade80; box-shadow: 0 0 10px #4ade80; }
-      .skin-card img { height: 70px; object-fit: contain; margin-bottom: 0.5rem; }
-
-      /* Rarity Text Colors */
-      .text-rarity-Consumer { color: #d1d5db; } .text-rarity-Industrial { color: #60a5fa; }
-      .text-rarity-Mil-Spec { color: #3b82f6; } .text-rarity-Restricted { color: #8b5cf6; }
-      .text-rarity-Classified { color: #ec4899; } .text-rarity-Covert { color: #ef4444; }
-      .text-rarity-Contraband { color: #f97316; } .text-rarity-Extraordinary { color: #f59e0b; }
-
-      /* Rarity Glow Filters */
-      .rarity-glow-Consumer { filter: drop-shadow(0 0 8px #d1d5db80); } .rarity-glow-Industrial { filter: drop-shadow(0 0 8px #60a5fa80); }
-      .rarity-glow-Mil-Spec { filter: drop-shadow(0 0 8px #3b82f680); } .rarity-glow-Restricted { filter: drop-shadow(0 0 8px #8b5cf680); }
-      .rarity-glow-Classified { filter: drop-shadow(0 0 8px #ec489980); } .rarity-glow-Covert { filter: drop-shadow(0 0 8px #ef444480); }
-      .rarity-glow-Contraband { filter: drop-shadow(0 0 8px #f9731680); } .rarity-glow-Extraordinary { filter: drop-shadow(0 0 8px #f59e0b80); }
-
-      /* --- CSGO Case Lobby V2 Styles --- */
-      .csgo-lobby-page {
-        background: linear-gradient(135deg, #1a1d3a 0%, #0f1124 100%);
-        color: #e5e7eb;
+      .csgo-reel .case-item-card {
+        transition: filter 0.5s 0.2s ease-out, opacity 0.5s 0.2s ease-out, transform 0.5s 0.2s ease-out;
       }
 
-      @keyframes marquee {
-        0% { transform: translateX(0%); }
-        100% { transform: translateX(-50%); }
+      @keyframes subtle-glow-pulse {
+        0%, 100% { filter: drop-shadow(0 0 8px var(--rarity-color)); }
+        50% { filter: drop-shadow(0 0 16px var(--rarity-color)); }
       }
-      .price-ticker-marquee {
-        width: 100%;
-        overflow: hidden;
-        background-color: #111827;
-        border-bottom: 1px solid #374151;
-        padding: 0.5rem 0;
-        white-space: nowrap;
+      .case-item-card-v2 .rarity-glow-Mil-Spec, .case-item-card-v2 .rarity-glow-Restricted,
+      .case-item-card-v2 .rarity-glow-Classified, .case-item-card-v2 .rarity-glow-Covert,
+      .case-item-card-v2 .rarity-glow-Contraband, .case-item-card-v2 .rarity-glow-Extraordinary,
+      .case-item-card-v2 .rarity-glow-Consumer, .case-item-card-v2 .rarity-glow-Industrial {
+          animation: subtle-glow-pulse 3s infinite ease-in-out;
       }
-      .price-ticker-content {
-        display: flex;
-        width: 200%;
-        animation: marquee 60s linear infinite;
-      }
-      .price-ticker-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0 2rem;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #9ca3af;
-      }
+      
+      .csgo-count-selector-v2 { display: flex; align-items: center; gap: 0.75rem; }
+      .csgo-count-selector-v2-btn { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; font-weight: 700; border-radius: 9999px; background-color: #2d343e; color: #9ca3af; transition: all 0.2s ease; border: 1px solid transparent; }
+      .csgo-count-selector-v2-btn:hover:not(.active) { background-color: #4b5563; color: #fff; }
+      .csgo-count-selector-v2-btn.active { background-color: #facc15; color: #161a22; box-shadow: 0 0 10px #facc15; border-color: #f59e0b; }
+      .csgo-quick-spin-label { display: flex; align-items: center; gap: 0.5rem; color: #9ca3af; font-size: 0.875rem; cursor: pointer; }
+      .csgo-quick-spin-label input { accent-color: #facc15; }
 
-      .csgo-sub-nav {
-        background-color: #1f2937;
-        border-bottom: 1px solid #4b5569;
-      }
-      .csgo-sub-nav-item {
-        position: relative;
-        padding: 1rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #9ca3af;
-        transition: color 0.2s ease;
-        border-bottom: 3px solid transparent;
-      }
-      .csgo-sub-nav-item:hover { color: #ffffff; }
-      .csgo-sub-nav-item.active {
-        color: #ffffff;
-        border-bottom-color: #ef4444;
-      }
-      .csgo-sub-nav-item.coming-soon { opacity: 0.6; cursor: not-allowed; }
-      .coming-soon-badge {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.25rem;
-        font-size: 0.6rem;
-        font-weight: bold;
-        background-color: #f59e0b;
-        color: #111827;
-        padding: 0.1rem 0.3rem;
-        border-radius: 0.25rem;
-        transform: rotate(10deg);
-      }
+      /* Upgrader V5 */
+      .upgrader-v5-wrapper { display: flex; flex-direction: column; height: calc(100vh - 57px); }
+      .upgrader-v5-main { flex-grow: 1; display: grid; grid-template-columns: 2fr 3fr 2fr; grid-template-rows: 1fr; min-height: 0; gap: 2rem; padding: 2rem; align-items: center; }
+      .upgrader-v5-panel { background-color: #161a22; border-radius: 0.5rem; padding: 1rem; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+      .upgrader-v5-panel h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #2d343e; padding-bottom: 0.5rem; }
+      .upgrader-v5-inventory-grid { flex-grow: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.75rem; overflow-y: auto; }
+      
+      .upgrader-v5-gauge-wrapper { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+      .gauge-v5-circle-wrapper { position: relative; width: 300px; height: 300px; }
+      .gauge-v5-pointer { position: absolute; top: 10px; left: 50%; width: 24px; height: 150px; transform-origin: 50% 140px; transition: transform 6s cubic-bezier(0.25, 1, 0.5, 1); z-index: 10; }
+      .gauge-v5-circle { fill: none; stroke-width: 12; transition: stroke-dashoffset 0.5s ease; transform-origin: 50% 50%; transform: rotate(-90deg); }
+      .gauge-v5-circle.bg { stroke: #2d343e; }
+      .gauge-v5-circle.win { stroke: #22c55e; }
+      .gauge-v5-content { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .hex-slot-v5 { position: relative; width: 180px; height: 207px; background-color: #0d1118; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; border: 2px solid #2d343e; }
+      .hex-slot-v5.has-item { background: transparent; border-color: var(--rarity-color, #2d343e); }
+      .upgrader-v5-io { display: flex; justify-content: space-around; align-items: center; width: 100%; }
+      .upgrader-multiplier-selector { display: flex; justify-content: center; gap: 0.5rem; }
+      .upgrader-multiplier-btn { background-color: #2d343e; color: #9ca3af; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.375rem; transition: all 0.2s ease; }
+      .upgrader-multiplier-btn:hover { background-color: #4b5563; color: #fff; }
 
-      .csgo-hero-banner {
-        position: relative;
+      /* --- Admin Console --- */
+      .admin-console {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40vh;
+        background-color: rgba(10, 10, 20, 0.9);
+        backdrop-filter: blur(5px);
+        border-top: 2px solid #4a5568;
+        z-index: 1000;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: space-between;
-        gap: 2rem;
-        background-color: #1f2937;
-        border-radius: 1rem;
-        padding: 2rem;
-        overflow: hidden;
-        border: 1px solid #374151;
+        font-family: 'Fira Code', monospace;
+        transition: transform 0.3s ease-in-out;
+        transform: translateY(100%);
       }
-      @media (min-width: 768px) {
-        .csgo-hero-banner { flex-direction: row; }
+      .admin-console.visible {
+        transform: translateY(0);
       }
-      .csgo-hero-bg {
-        position: absolute;
-        inset: 0;
-        background-size: cover;
-        background-position: center;
-        filter: blur(20px) brightness(0.4);
-        transform: scale(1.2);
-        opacity: 0.5;
-      }
-      .csgo-hero-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #ffffff;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-      }
-      .csgo-hero-price {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #facc15;
-        margin: 0.5rem 0 1.5rem;
-      }
-      .csgo-hero-button {
-        padding: 0.75rem 2.5rem;
-        background: linear-gradient(to right, #ef4444, #f97316);
-        color: white;
-        font-weight: bold;
-        text-transform: uppercase;
-        border-radius: 0.5rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 15px #ef444480;
-      }
-      .csgo-hero-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 25px #ef4444;
-      }
-      .csgo-hero-image {
-        width: 200px;
-        height: 200px;
-        object-fit: contain;
-        filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-      }
-       @media (min-width: 768px) {
-        .csgo-hero-image { width: 250px; height: 250px; }
-      }
-
-      .csgo-cases-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 1.5rem;
-      }
-
-      .csgo-case-card {
-        background: linear-gradient(145deg, #2a354a, #1f2937);
-        border-radius: 0.75rem;
+      .admin-console-output {
+        flex-grow: 1;
         padding: 1rem;
-        border: 1px solid #374151;
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
+        overflow-y: auto;
+        font-size: 0.875rem;
+        line-height: 1.5;
       }
-      .csgo-case-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255, 255, 255, 0.1), transparent 40%);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      .csgo-case-card:hover {
-        transform: translateY(-5px) scale(1.03);
-        border-color: #ef4444;
-        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
-      }
-      .csgo-case-card:hover::before {
-        opacity: 1;
-      }
-      .csgo-case-card-image-wrapper {
-        height: 150px;
+       .admin-console-output > div {
+        margin-bottom: 0.25rem;
+       }
+      .output-line-error { color: #f87171; }
+      .output-line-success { color: #4ade80; }
+      .output-line-info { color: #60a5fa; }
+      .output-line-cmd { color: #e5e7eb; }
+      .output-line-cmd::before { content: '> '; color: #9ca3af; }
+      .admin-console-input-wrapper {
         display: flex;
         align-items: center;
-        justify-content: center;
-        margin-bottom: 1rem;
+        padding: 0.5rem 1rem;
+        border-top: 1px solid #374151;
       }
-      .csgo-case-card-image {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-        filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
-        transition: transform 0.3s ease;
+      .admin-console-input-wrapper > span {
+        color: #fde047;
+        font-weight: bold;
+        margin-right: 0.5rem;
       }
-      .csgo-case-card:hover .csgo-case-card-image {
-        transform: scale(1.1);
-      }
-      .csgo-case-card-risk-btn {
-        background-color: #374151;
-        color: #9ca3af;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        position: relative;
-      }
-      .csgo-case-card-risk-btn:hover {
-        background-color: #4b5569;
-        color: white;
-      }
-      .csgo-case-card-risk-btn.active {
-        background-color: #ef4444;
-        color: white;
-      }
-      .csgo-case-card-risk-btn.active .risk-indicator {
-          opacity: 1;
-          transform: scaleX(1);
+      .admin-console-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #f3f4f6;
+        font-family: inherit;
+        font-size: 1rem;
       }
 
-      /* --- CSGO Case Opening V2 Styles --- */
-      .csgo-v2-page {
-        background: radial-gradient(ellipse at top, #2c2a4a, #101124);
-      }
-      .csgo-v2-top-container {
-        width: 100%;
-        max-width: 1200px;
-        min-height: 450px;
+      /* --- Global Chat --- */
+      .chat-container {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 350px;
+        background-color: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(8px);
+        border-left: 1px solid #334155;
+        z-index: 999;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 2rem;
+        flex-direction: column;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(100%);
       }
-      .csgo-v2-top-section {
+      .chat-container.visible {
+        transform: translateX(0);
+      }
+      .chat-header {
+        padding: 1rem;
+        border-bottom: 1px solid #334155;
+        font-weight: bold;
+      }
+      .chat-messages {
+        flex-grow: 1;
+        padding: 1rem;
+        overflow-y: auto;
         display: flex;
-        align-items: center;
-        justify-content: space-around;
-        gap: 3rem;
-        width: 100%;
-        padding: 2rem;
-        background: rgba(0,0,0,0.1);
-        border-radius: 1rem;
+        flex-direction: column-reverse;
       }
-      .csgo-v2-case-image-container { perspective: 1000px; }
-      .csgo-v2-case-image {
-        width: 250px; height: 250px; object-fit: contain;
-        filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
-        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-        animation: case-float 4s ease-in-out infinite;
+       .chat-messages-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+       }
+      .chat-message {
+        animation: chat-fade-in 0.3s ease;
+        word-break: break-word;
       }
-      @keyframes case-float {
-        0%, 100% { transform: translateY(0) rotateY(-5deg); }
-        50% { transform: translateY(-15px) rotateY(5deg); }
+      @keyframes chat-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      .chat-message .username { font-weight: bold; cursor: pointer; }
+      .chat-message .username.admin { color: #f87171; text-shadow: 0 0 5px #f87171; }
+      .chat-message .content { color: #cbd5e1; }
+      
+      .chat-input-area { padding: 1rem; border-top: 1px solid #334155; }
+      .chat-input-wrapper { display: flex; gap: 0.5rem; }
+      .chat-input {
+        flex-grow: 1; background-color: #1e293b; border: 1px solid #475569;
+        border-radius: 0.375rem; padding: 0.5rem 0.75rem; color: white;
+        outline: none;
       }
-      .csgo-v2-controls-container { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; text-align: center; }
-      .csgo-v2-case-title { font-size: 2.5rem; font-weight: 800; color: white; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
-      .csgo-v2-count-btns { display: flex; gap: 0.5rem; background-color: #111827; padding: 0.5rem; border-radius: 99px; }
-      .csgo-v2-count-btn {
-        width: 40px; height: 40px; border-radius: 50%; background-color: #374151; color: #d1d5db;
-        font-weight: bold; transition: all 0.2s; border: 2px solid transparent;
+      .chat-input:focus { border-color: #a78bfa; }
+      .chat-input:disabled { background-color: #334155; cursor: not-allowed; }
+
+      /* --- User Profile Modal --- */
+      .profile-modal-backdrop { z-index: 1050; }
+      .profile-modal-content {
+        animation: profile-modal-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
-      .csgo-v2-count-btn:hover:not(.active) { background-color: #4b5569; }
-      .csgo-v2-count-btn.active { background-color: #ef4444; color: white; border-color: #f87171; box-shadow: 0 0 10px #ef4444; }
-      .csgo-v2-action-btns { display: flex; gap: 1rem; }
-      .csgo-v2-open-btn, .csgo-v2-demo-btn { padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: bold; text-transform: uppercase; transition: all 0.3s ease; }
-      .csgo-v2-open-btn { background: linear-gradient(to right, #ef4444, #f97316); color: white; box-shadow: 0 0 15px #ef444480; }
-      .csgo-v2-open-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 25px #ef4444; }
-      .csgo-v2-open-btn:disabled { background: #4b5569; cursor: not-allowed; opacity: 0.6; }
-      .csgo-v2-demo-btn { background-color: #374151; color: #d1d5db; }
-      .csgo-v2-demo-btn:hover { background-color: #4b5569; }
-      .csgo-v2-provably-fair { font-size: 0.75rem; color: #6b7280; text-decoration: underline; transition: color 0.2s; }
-      .csgo-v2-provably-fair:hover { color: #9ca3af; }
-      .csgo-multi-spinner-container {
-        position: relative; width: 100%; height: 100%; padding: 1rem 0;
-        background: linear-gradient(rgba(0,0,0,0.5), transparent, rgba(0,0,0,0.5));
-        border-radius: 1rem; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1);
+      @keyframes profile-modal-scale-in {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
       }
-      .csgo-multi-spinner-container::before, .csgo-multi-spinner-container::after {
-        content: ''; position: absolute; left: 0; right: 0; height: 50%; z-index: 5; pointer-events: none;
+      .profile-stat-grid {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 1rem; text-align: center;
       }
-      .csgo-multi-spinner-container::before { top: 0; background: linear-gradient(to right, #101124, transparent 20%, transparent 80%, #101124); }
-      .csgo-multi-spinner-container::after { bottom: 0; background: linear-gradient(to right, #101124, transparent 20%, transparent 80%, #101124); }
-      .csgo-multi-spinner-marker {
-        position: absolute; left: 50%; top: 0; bottom: 0; width: 4px;
-        background: linear-gradient(to bottom, transparent, #fde047, transparent);
-        transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #fde047, 0 0 20px #fde047; border-radius: 2px;
+      .profile-stat {
+        background-color: rgba(255,255,255,0.05);
+        padding: 0.75rem; border-radius: 0.5rem;
       }
-      .csgo-reels-column { display: flex; flex-direction: column; gap: 1rem; }
-      .csgo-reel-wrapper { height: 150px; }
-      .csgo-reel { display: flex; height: 100%; }
-      .csgo-reel-item { width: 144px; height: 150px; padding: 4px; flex-shrink: 0; }
-      .csgo-reel-item-inner {
-        width: 100%; height: 100%; background: radial-gradient(circle at 50% 0%, #334155, #0f172a 80%);
-        border-radius: 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 0.5rem; text-align: center; border-bottom: 4px solid var(--rarity-color);
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-      }
-      .csgo-reel-item-image { height: 70px; object-fit: contain; }
-      .csgo-reel-item-name { font-size: 0.75rem; color: #d1d5db; margin-top: 0.25rem; }
-      .csgo-reel-item-skin { font-size: 0.8rem; font-weight: bold; }
-      .csgo-v2-contents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; }
-      .csgo-v2-content-card {
-        background: linear-gradient(145deg, #2a354a, #1f2937); border-radius: 0.75rem; padding: 0.75rem;
-        border: 1px solid #374151; transition: all 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column;
-      }
-      .csgo-v2-content-card:hover { transform: translateY(-4px); border-color: var(--rarity-color); box-shadow: 0 5px 20px color-mix(in srgb, var(--rarity-color) 30%, transparent); }
-      .csgo-v2-item-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; margin-bottom: 0.5rem; }
-      .csgo-v2-item-price { font-weight: bold; color: #16a34a; }
-      .csgo-v2-item-odds { color: #9ca3af; }
-      .csgo-v2-content-card-image-wrapper { flex-grow: 1; display: flex; align-items: center; justify-content: center; height: 120px; }
-      .csgo-v2-content-card-image { max-width: 100%; max-height: 100%; object-fit: contain; }
-      .csgo-v2-content-card-rarity-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background-color: var(--rarity-color); box-shadow: 0 0 8px var(--rarity-color); }
-      @keyframes multi-win-fade-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-      .animate-multi-win-fade-in { animation: multi-win-fade-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; backdrop-filter: blur(4px); }
-      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-      .animate-fade-in { animation: fade-in 0.5s ease forwards; }
+      .profile-stat-label { font-size: 0.75rem; color: #94a3b8; }
+      .profile-stat-value { font-size: 1.125rem; font-weight: 700; color: #f1f5f9; }
+
+       /* --- Money Rain Banner --- */
+       @keyframes slide-down-fade-in {
+        from { opacity: 0; transform: translateY(-100%); }
+        to { opacity: 1; transform: translateY(0); }
+       }
+       .money-rain-banner { animation: slide-down-fade-in 0.5s cubic-bezier(0.23, 1, 0.32, 1); }
+       .money-rain-text-glow { text-shadow: 0 0 10px #fde047, 0 0 20px #f59e0b; }
     </style>
   <link rel="stylesheet" href="/index.css">
 </head>

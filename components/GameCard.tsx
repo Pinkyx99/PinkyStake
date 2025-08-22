@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { type Game } from '../types';
+import { type Game } from '../types.ts';
 
 const GameCard: React.FC<{ game: Game; onSelect: () => void; }> = ({ game, onSelect }) => {
   const cardRef = useRef<HTMLDivElement>(null);

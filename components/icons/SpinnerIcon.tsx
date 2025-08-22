@@ -1,16 +1,7 @@
-
 import React from 'react';
 
 const SpinnerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" {...props}>
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      .animate-spin {
-        animation: spin 1s linear infinite;
-      }
-    `}</style>
     <path
       className="opacity-25"
       fill="currentColor"

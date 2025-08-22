@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/UserContext.tsx';
 import SpinnerIcon from './icons/SpinnerIcon';
 
 const AVAILABLE_CODES = [
@@ -9,7 +9,7 @@ const AVAILABLE_CODES = [
 ];
 
 const PromoCodeSection: React.FC = () => {
-    const { profile, redeemCode } = useUser();
+    const { user, redeemCode } = useUser();
     const [inputCode, setInputCode] = useState('');
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [loading, setLoading] = useState(false);
@@ -30,6 +30,10 @@ const PromoCodeSection: React.FC = () => {
         setLoading(false);
         setTimeout(() => setMessage(null), 4000);
     };
+
+    if (!user) {
+        return <div className="text-center text-gray-500">Loading user data...</div>;
+    }
 
     return (
         <div className="w-full max-w-2xl mx-auto space-y-8">
@@ -68,9 +72,9 @@ const PromoCodeSection: React.FC = () => {
 
             <div>
                 <h3 className="text-lg font-semibold text-purple-300 mb-3">Used Codes</h3>
-                {profile.usedCodes.length > 0 ? (
+                {user.usedCodes.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                        {profile.usedCodes.map(code => (
+                        {user.usedCodes.map(code => (
                             <span key={code} className="font-mono bg-slate-700 px-2 py-1 rounded text-gray-400 line-through">{code}</span>
                         ))}
                     </div>

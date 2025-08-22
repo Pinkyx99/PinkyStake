@@ -48,7 +48,7 @@ export const useSound = () => {
         
         switch (type) {
             case 'csgo_spinner_tick_v2': {
-                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.setValueAtTime(0.15, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
                 const osc = ctx.createOscillator();
                 osc.type = 'sine';

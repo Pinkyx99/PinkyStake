@@ -1,6 +1,11 @@
 
 
 
+
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
@@ -8,8 +13,8 @@ import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import UndoIcon from '../icons/UndoIcon';
 import RebetIcon from '../icons/RebetIcon';
 import ClearIcon from '../icons/ClearIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import { useUser } from '../../contexts/UserContext';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import { useUser } from '../../contexts/UserContext.tsx';
 import RouletteRulesModal from './roulette/RouletteRulesModal';
 import { useSound } from '../../hooks/useSound';
 import WinAnimation from '../WinAnimation';
@@ -77,7 +82,7 @@ const BetArea: React.FC<{ label: string, onBet: () => void, betAmount?: number, 
 );
 
 const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { user, adjustBalance } = useUser();
     const [selectedChip, setSelectedChip] = useState(CHIP_VALUES[0]);
     const [bets, setBets] = useState<Bets>({});
     const [lastBets, setLastBets] = useState<Bets>({});
@@ -92,7 +97,7 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [wheelAnimation, setWheelAnimation] = useState<React.CSSProperties>({});
     const [ballAnimation, setBallAnimation] = useState<{orbiting: React.CSSProperties, settling: React.CSSProperties}>({orbiting: {}, settling: {}});
 
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
     const isMounted = useRef(true);
     const soundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound } = useSound();
@@ -108,11 +113,11 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const totalBet = useMemo(() => Object.values(bets).reduce((sum, amount) => sum + amount, 0), [bets]);
 
     const handlePlaceBet = useCallback((spot: BetSpot) => {
-        if (gamePhase !== 'betting' || !profile || profile.balance < totalBet + selectedChip) return;
+        if (gamePhase !== 'betting' || !user || user.balance < totalBet + selectedChip) return;
         playSound('bet');
         setBets(prev => ({ ...prev, [spot]: (prev[spot] || 0) + selectedChip }));
         setBetHistory(prev => [...prev, { spot, amount: selectedChip }]);
-    }, [gamePhase, selectedChip, profile, totalBet, playSound]);
+    }, [gamePhase, selectedChip, user, totalBet, playSound]);
 
     const handleSpin = async () => {
         if (totalBet === 0 || gamePhase !== 'betting') return;
@@ -168,13 +173,13 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
                 return;
             }
-            playSound('spin_tick');
-            const progress = elapsedTime / spinDuration;
+            const progress = 1 - (elapsedTime / spinDuration);
+            playSound('spin_tick', { progress });
             const easeOutQuad = (t: number) => t * (2 - t);
             const easedProgress = easeOutQuad(progress);
             const minInterval = 80;
             const maxInterval = 600;
-            const nextInterval = minInterval + (maxInterval - minInterval) * easedProgress;
+            const nextInterval = minInterval + (maxInterval - minInterval) * (1-easedProgress);
             soundTimeoutRef.current = setTimeout(playTickingSound, nextInterval);
         };
         playTickingSound();

@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { type Suit, type Card as CardType } from './deck';
+import { type Suit, type Card as CardType } from './deck.ts';
 
 interface CardProps {
   card: CardType;

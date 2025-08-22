@@ -1,6 +1,10 @@
 
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -9,10 +13,10 @@ import GameRulesIcon from '../icons/GameRulesIcon';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import ChevronLeftIcon from '../icons/ChevronLeftIcon';
 import ChevronRightIcon from '../icons/ChevronRightIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import DoorComponent from './doors/Door';
 import GameRulesModal from './doors/GameRulesModal';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../contexts/UserContext.tsx';
 import { useSound } from '../../hooks/useSound';
 import WinAnimation from '../WinAnimation';
 
@@ -59,7 +63,7 @@ interface DoorsGameProps {
 }
 
 const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { user, adjustBalance } = useUser();
   const [betAmount, setBetAmount] = useState(1.0);
   const [betInput, setBetInput] = useState(betAmount.toFixed(2));
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
@@ -72,7 +76,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
   
-  const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+  const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
   const gridRef = useRef<HTMLDivElement>(null);
   const doorRefs = useRef<(HTMLDivElement | null)[]>([]);
   const isMounted = useRef(true);
@@ -145,7 +149,7 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
   }, [gamePhase, riskLevel, createDoorsForLevel]);
   
   const handleBet = async () => {
-    if (!profile || betAmount > profile.balance) return;
+    if (!user || betAmount > user.balance) return;
     
     playSound('bet');
     await adjustBalance(-betAmount);
@@ -310,8 +314,8 @@ const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
     if (isFinished) {
       return <button onClick={handlePlayAgain} className="w-full h-full text-2xl font-bold rounded-md bg-[#9dff00] hover:bg-[#8ee000] transition-colors text-black uppercase">Bet Again</button>;
     }
-    return <button onClick={handleBet} disabled={!profile || betAmount > profile.balance} className="w-full h-full text-2xl font-bold rounded-md bg-[#9dff00] hover:bg-[#8ee000] transition-colors text-black uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">Bet</button>;
-  }, [gamePhase, winnings, level, profile, betAmount, handlePlayAgain, handleCashout, handleBet, isConfigPhase, isFinished]);
+    return <button onClick={handleBet} disabled={!user || betAmount > user.balance} className="w-full h-full text-2xl font-bold rounded-md bg-[#9dff00] hover:bg-[#8ee000] transition-colors text-black uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">Bet</button>;
+  }, [gamePhase, winnings, level, user, betAmount, handlePlayAgain, handleCashout, handleBet, isConfigPhase, isFinished]);
   
   return (
     <div className="h-screen w-screen flex flex-col font-poppins text-white select-none overflow-hidden bg-gradient-to-br from-[#1a1d3a] via-[#1e152f] to-[#0f1124]">

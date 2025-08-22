@@ -1,14 +1,15 @@
 
+
 import React, { useState, useCallback, useMemo } from 'react';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import ArrowLeftIcon from '../../icons/ArrowLeftIcon';
+import useAnimatedBalance from '../../../hooks/useAnimatedBalance';
 import { useUser } from '../../contexts/UserContext';
-import type { BoxItem, MysteryBox } from '../../types';
-import UnboxingAnimation from './mysterybox/UnboxingAnimation';
-import { useSound } from '../../hooks/useSound';
-import MinusIcon from '../icons/MinusIcon';
-import PlusIcon from '../icons/PlusIcon';
-import CloseIcon from '../icons/CloseIcon';
+import type { BoxItem, MysteryBox } from '../../../types';
+import UnboxingAnimation from './UnboxingAnimation';
+import { useSound } from '../../../hooks/useSound';
+import MinusIcon from '../../icons/MinusIcon';
+import PlusIcon from '../../icons/PlusIcon';
+import CloseIcon from '../../icons/CloseIcon';
 
 const ItemCard: React.FC<{ item: BoxItem }> = ({ item }) => {
     return (

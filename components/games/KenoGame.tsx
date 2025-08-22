@@ -1,8 +1,12 @@
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import { useUser } from '../../contexts/UserContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
@@ -17,7 +21,6 @@ import WinAnimation from '../WinAnimation';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
-const MAX_PROFIT = 10000.00;
 const NUMBERS_COUNT = 40;
 const DRAW_COUNT = 10;
 const MAX_SELECTION = 10;
@@ -26,7 +29,7 @@ const RISK_LEVELS: RiskLevel[] = ['Low', 'Medium', 'High'];
 type GamePhase = 'betting' | 'drawing' | 'result';
 
 const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { user, adjustBalance } = useUser();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [selectedNumbers, setSelectedNumbers] = useState<Set<number>>(new Set());
@@ -39,8 +42,9 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [timer, setTimer] = useState(0);
     const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
     const isMounted = useRef(true);
+    const finalDrawRef = useRef<Set<number>>(new Set());
     const { playSound } = useSound();
 
     useEffect(() => {
@@ -94,184 +98,159 @@ const KenoGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         playSound('click');
         setSelectedNumbers(new Set());
     };
-
-    const handleRiskChange = (direction: 'next' | 'prev') => {
-        if (gamePhase !== 'betting') return;
-        playSound('click');
-        const currentIndex = RISK_LEVELS.indexOf(riskLevel);
-        const nextIndex = direction === 'next'
-            ? (currentIndex + 1) % RISK_LEVELS.length
-            : (currentIndex - 1 + RISK_LEVELS.length) % RISK_LEVELS.length;
-        setRiskLevel(RISK_LEVELS[nextIndex]);
-    };
-
-    const handleBet = async () => {
-        if (!profile || gamePhase !== 'betting' || selectedNumbers.size === 0 || betAmount > profile.balance) return;
-
+    
+    const handleBet = useCallback(async () => {
+        if (!user || betAmount > user.balance || selectedNumbers.size === 0 || gamePhase !== 'betting') return;
+        
         playSound('bet');
         await adjustBalance(-betAmount);
         if (!isMounted.current) return;
-
+        
         setGamePhase('drawing');
         setDrawnNumbers(new Set());
         setHits(new Set());
         setWinnings(null);
-
+        
         const allNumbers = Array.from({ length: NUMBERS_COUNT }, (_, i) => i + 1);
-        const numbersToDraw: number[] = [];
+        const shuffled = allNumbers.sort(() => 0.5 - Math.random());
+        finalDrawRef.current = new Set(shuffled.slice(0, DRAW_COUNT));
+
         for (let i = 0; i < DRAW_COUNT; i++) {
-            const randomIndex = Math.floor(Math.random() * allNumbers.length);
-            numbersToDraw.push(allNumbers.splice(randomIndex, 1)[0]);
+            const drawTimeout = setTimeout(() => {
+                if (!isMounted.current) return;
+                const drawnNumber = Array.from(finalDrawRef.current)[i];
+                setDrawnNumbers(prev => new Set(prev).add(drawnNumber));
+                if (selectedNumbers.has(drawnNumber)) {
+                    playSound('reveal');
+                    setHits(prev => new Set(prev).add(drawnNumber));
+                } else {
+                    playSound('tick');
+                }
+            }, i * 300);
         }
         
-        for (const [index, num] of numbersToDraw.entries()) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+        const resultTimeout = setTimeout(async () => {
             if (!isMounted.current) return;
-            playSound('tick');
-            setDrawnNumbers(prev => new Set(prev).add(num));
+            
+            const hitCount = Array.from(finalDrawRef.current).filter(n => selectedNumbers.has(n)).length;
+            const payoutTable = PAYOUTS[riskLevel][selectedNumbers.size];
+            const multiplier = payoutTable?.[hitCount] || 0;
+            const totalWinnings = betAmount * multiplier;
+            
+            setWinnings(totalWinnings);
 
-            if (index === DRAW_COUNT - 1) {
-                // Last number drawn, process results
-                const finalHits = new Set([...selectedNumbers].filter(n => numbersToDraw.includes(n)));
-                setHits(finalHits);
-
-                const picksCount = selectedNumbers.size;
-                const hitsCount = finalHits.size;
-                const payoutTable = PAYOUTS[riskLevel][picksCount];
-                const multiplier = payoutTable ? (payoutTable[hitsCount] || 0) : 0;
-                const finalWinnings = betAmount * multiplier;
-                
-                if (finalWinnings > 0) {
-                    const netWinnings = finalWinnings - betAmount;
-                    if(netWinnings > 0) {
-                      setWinData({ amount: netWinnings, key: Date.now() });
-                    }
-                    playSound('win');
-                    await adjustBalance(finalWinnings);
-                } else {
-                    playSound('lose');
-                }
-                
-                if (!isMounted.current) return;
-                setWinnings(finalWinnings);
-                setGamePhase('result');
-                
-                setTimeout(() => {
-                    if (isMounted.current) {
-                       setGamePhase('betting');
-                       setDrawnNumbers(new Set());
-                       setHits(new Set());
-                    }
-                }, 3000);
+            if (totalWinnings > 0) {
+                playSound('win');
+                setWinData({ amount: totalWinnings - betAmount, key: Date.now() });
+                await adjustBalance(totalWinnings);
+            } else {
+                playSound('lose');
             }
-        }
+            if (isMounted.current) setGamePhase('result');
+
+        }, DRAW_COUNT * 300 + 500);
+
+    }, [user, betAmount, selectedNumbers, riskLevel, adjustBalance, playSound, gamePhase]);
+
+    const handlePlayAgain = () => {
+        setGamePhase('betting');
+        setDrawnNumbers(new Set());
+        setHits(new Set());
+        setWinnings(null);
     };
 
-    const getPayoutTable = useMemo(() => {
-        const picksCount = selectedNumbers.size;
-        if (picksCount === 0) return [];
-        const table = PAYOUTS[riskLevel][picksCount] || {};
-        return Object.entries(table)
-            .map(([hits, multi]) => ({ hits: parseInt(hits), multi }))
-            .filter(item => item.multi > 0) 
-            .sort((a, b) => a.hits - b.hits);
-    }, [selectedNumbers.size, riskLevel]);
-    
-    const getNumberClass = (num: number) => {
-        const isSelected = selectedNumbers.has(num);
-        const isDrawn = drawnNumbers.has(num);
-        const isHit = hits.has(num);
-
-        if (isHit) return 'bg-green-500/80 ring-2 ring-yellow-300 scale-110';
-        if (isDrawn) return 'bg-yellow-500/70 scale-105';
-        if (isSelected) return 'bg-purple-600/90 ring-2 ring-purple-400';
-        return 'bg-slate-700/50 hover:bg-slate-600/50';
-    };
+    const isBettingPhase = gamePhase === 'betting';
 
     return (
-        <div className="bg-[#0f1124] h-screen flex flex-col font-poppins text-white select-none">
+        <div className="bg-slate-900 min-h-screen flex flex-col font-poppins text-white select-none">
             {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
-            <header className="flex items-center justify-between p-3 bg-[#1a1b2f] shrink-0">
+            <header className="flex items-center justify-between p-3 bg-[#1a1b2f]">
                 <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games"><ArrowLeftIcon className="w-6 h-6" /></button>
                     <h1 className="text-xl font-bold uppercase text-blue-400">Keno</h1>
                 </div>
                 <div className="flex-1 flex justify-center items-center bg-black/30 rounded-md px-4 py-1.5">
-                    <span className="text-base font-bold text-white">{animatedBalance.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-yellow-400">{animatedBalance.toFixed(2)}</span>
                     <span className="text-sm text-gray-400 ml-2">EUR</span>
                 </div>
-                <div className="flex-1 flex justify-end items-center space-x-3 text-sm">
-                    <span className="font-mono text-gray-400">{`00:00:${timer.toString().padStart(2, '0')}`}</span>
-                    <button className="text-gray-400 hover:text-white"><SoundOnIcon className="w-5 h-5"/></button>
-                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
+                <div className="flex-1 flex justify-end items-center space-x-4">
+                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white flex items-center gap-1"><GameRulesIcon className="w-5 h-5" /> Rules</button>
                 </div>
             </header>
 
-            <main className="flex-grow p-4 flex flex-col items-center justify-center gap-4">
-                <div className="w-full max-w-2xl">
-                    <div className="grid grid-cols-10 gap-1 md:gap-2">
-                        {Array.from({ length: NUMBERS_COUNT }, (_, i) => i + 1).map(num => (
-                            <button
-                                key={num}
-                                onClick={() => handleNumberToggle(num)}
-                                disabled={gamePhase !== 'betting'}
-                                className={`aspect-square rounded-md flex items-center justify-center font-bold text-sm md:text-lg transition-all duration-200 ${getNumberClass(num)}`}
-                            >
-                                {num}
-                            </button>
-                        ))}
+            <main className="flex-grow flex flex-col lg:flex-row p-4 gap-4">
+                <div className="w-full lg:w-72 shrink-0 bg-[#1a1b2f] rounded-lg p-4 flex flex-col gap-4 order-last lg:order-first">
+                    <h3 className="text-lg font-bold text-center">Payouts</h3>
+                    <div className="flex-grow overflow-y-auto space-y-1 text-xs pr-2">
+                        {selectedNumbers.size > 0 && PAYOUTS[riskLevel][selectedNumbers.size] && Object.entries(PAYOUTS[riskLevel][selectedNumbers.size]).map(([hitCount, multiplier]) => (
+                            <div key={hitCount} className={`flex justify-between p-1.5 rounded ${Number(hitCount) === hits.size && gamePhase !== 'betting' ? 'bg-yellow-500/20' : 'bg-slate-800/50'}`}>
+                                <span className="font-semibold text-gray-300">Hits: {hitCount}</span>
+                                <span className="font-bold text-yellow-400">{multiplier.toFixed(2)}x</span>
+                            </div>
+                        )).reverse()}
                     </div>
+                </div>
+                <div className="flex-grow flex items-center justify-center bg-[#1a1b2f] rounded-lg p-4">
+                     <div className="grid grid-cols-8 gap-2 w-full max-w-2xl">
+                        {Array.from({ length: NUMBERS_COUNT }, (_, i) => i + 1).map(num => {
+                            const isSelected = selectedNumbers.has(num);
+                            const isDrawn = drawnNumbers.has(num);
+                            const isHit = hits.has(num);
+                            let bgClass = 'bg-slate-700 hover:bg-slate-600';
+                            if (isSelected) bgClass = 'bg-blue-600 hover:bg-blue-500';
+                            if (isDrawn) bgClass = 'bg-slate-500';
+                            if (isHit) bgClass = 'bg-green-500';
 
-                    <div className="flex justify-center gap-4 mt-4">
-                        <button onClick={handleAutoPick} disabled={gamePhase !== 'betting'} className="px-8 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold disabled:opacity-50">Auto Pick</button>
-                        <button onClick={handleClear} disabled={gamePhase !== 'betting'} className="px-8 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold disabled:opacity-50">Clean</button>
+                            return (
+                                <button
+                                    key={num}
+                                    onClick={() => handleNumberToggle(num)}
+                                    disabled={!isBettingPhase}
+                                    className={`keno-number ${bgClass} ${gamePhase === 'drawing' && isDrawn ? 'animate-keno-draw' : ''} ${isHit ? '!bg-green-500 animate-keno-hit' : ''}`}
+                                >
+                                    {num}
+                                </button>
+                            );
+                        })}
                     </div>
-
-                    <div className="mt-4 min-h-[70px]">
-                         <div className="flex justify-center items-center gap-1 md:gap-2 flex-wrap">
-                            {getPayoutTable.map(({ hits, multi }) => (
-                                <div key={hits} className="bg-slate-800/60 p-1 md:p-2 rounded-md text-center">
-                                    <p className="text-xs text-gray-400">{hits} Hits</p>
-                                    <p className={`font-bold text-sm md:text-base ${multi > 0 ? 'text-green-400' : 'text-gray-500'}`}>{multi.toFixed(2)}x</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                     <p className="text-center text-sm text-gray-400 mt-2">Select 1 - 10 numbers to play</p>
                 </div>
             </main>
 
             <footer className="shrink-0 bg-[#1a1b2f] p-4 border-t border-gray-700/50">
-                <div className="w-full max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-stretch justify-between gap-4">
-                     <div className="flex flex-col sm:flex-row items-center gap-4">
+                 <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
                         <div>
-                            <label className="text-xs font-semibold text-gray-400 mb-1 block">Bet</label>
+                            <label className="text-xs text-gray-400 mb-1 block">Bet</label>
                             <div className="flex items-center bg-[#2f324d] rounded-md p-1">
-                                <button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={gamePhase !== 'betting'} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed bg-[#404566] rounded-md"><MinusIcon className="w-5 h-5"/></button>
-                                <input type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={gamePhase !== 'betting'} className="w-24 bg-transparent text-center font-bold text-lg outline-none disabled:cursor-not-allowed" />
-                                <span className="text-gray-500 pr-2 text-sm font-bold">EUR</span>
-                                <button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={gamePhase !== 'betting'} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed bg-[#404566] rounded-md"><PlusIcon className="w-5 h-5"/></button>
+                                <button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={!isBettingPhase} className="p-2 disabled:opacity-50"><MinusIcon className="w-4 h-4"/></button>
+                                <input type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={!isBettingPhase} className="w-24 bg-transparent text-center font-bold text-base outline-none disabled:cursor-not-allowed" />
+                                <span className="text-gray-500 pr-2 font-semibold">EUR</span>
+                                <button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={!isBettingPhase} className="p-2 disabled:opacity-50"><PlusIcon className="w-4 h-4"/></button>
                             </div>
                         </div>
-                        <div>
-                            <label className="text-xs font-semibold text-gray-400 mb-1 block">Game Risk</label>
-                            <div className="flex items-center justify-between bg-[#2f324d] rounded-md p-1 w-48 h-[44px]">
-                                <button onClick={() => handleRiskChange('prev')} disabled={gamePhase !== 'betting'} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed"><ChevronLeftIcon className="w-4 h-4"/></button>
-                                <span className="font-bold text-base">{riskLevel}</span>
-                                <button onClick={() => handleRiskChange('next')} disabled={gamePhase !== 'betting'} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed"><ChevronRightIcon className="w-4 h-4"/></button>
+                         <div>
+                            <label className="text-xs text-gray-400 mb-1 block">Risk</label>
+                            <div className="flex items-center bg-[#2f324d] rounded-md p-1 w-40">
+                                <button onClick={() => setRiskLevel(RISK_LEVELS[(RISK_LEVELS.indexOf(riskLevel) - 1 + 3) % 3])} disabled={!isBettingPhase} className="p-2 disabled:opacity-50"><ChevronLeftIcon className="w-3 h-3"/></button>
+                                <span className="w-full text-center font-bold">{riskLevel}</span>
+                                <button onClick={() => setRiskLevel(RISK_LEVELS[(RISK_LEVELS.indexOf(riskLevel) + 1) % 3])} disabled={!isBettingPhase} className="p-2 disabled:opacity-50"><ChevronRightIcon className="w-3 h-3"/></button>
                             </div>
                         </div>
                     </div>
-                    <div className="w-full md:w-56 h-14 md:h-auto">
-                        <button
-                            onClick={handleBet}
-                            disabled={gamePhase !== 'betting' || selectedNumbers.size === 0 || !profile || betAmount > profile.balance}
-                            className="w-full h-full text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed"
-                        >
-                            Bet
-                        </button>
+                     <div className="flex items-center gap-3">
+                        <button onClick={handleAutoPick} disabled={!isBettingPhase} className="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold disabled:opacity-50">Auto Pick</button>
+                        <button onClick={handleClear} disabled={!isBettingPhase} className="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md font-semibold disabled:opacity-50">Clear</button>
+                     </div>
+                     <div className="w-full md:w-64">
+                        {gamePhase === 'result' ? (
+                            <button onClick={handlePlayAgain} className="w-full h-14 text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 text-white uppercase">Play Again</button>
+                        ) : (
+                            <button onClick={handleBet} disabled={!isBettingPhase || selectedNumbers.size === 0 || !user || betAmount > user.balance} className="w-full h-14 text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
+                                Bet
+                            </button>
+                        )}
                     </div>
-                </div>
+                 </div>
             </footer>
             <KenoRulesModal isOpen={isRulesModalOpen} onClose={() => setIsRulesModalOpen(false)} />
         </div>

@@ -1,9 +1,13 @@
 
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import { useUser } from '../../contexts/UserContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
@@ -23,7 +27,7 @@ const SEGMENT_COUNTS: SegmentCount[] = [10, 20, 30, 40, 50];
 type GamePhase = 'betting' | 'spinning' | 'result';
 
 const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { user, adjustBalance } = useUser();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');
@@ -35,7 +39,7 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [hoveredMultiplier, setHoveredMultiplier] = useState<number | null>(null);
     const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
     
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
     const isMounted = useRef(true);
     const soundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { playSound } = useSound();
@@ -84,7 +88,7 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }), [rotation, gamePhase]);
 
     const handleSpin = useCallback(async () => {
-        if (!profile || betAmount > profile.balance || gamePhase !== 'betting') return;
+        if (!user || betAmount > user.balance || gamePhase !== 'betting') return;
 
         playSound('bet');
         await adjustBalance(-betAmount);
@@ -152,7 +156,7 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             }, 3000);
 
         }, 7000);
-    }, [profile, betAmount, gamePhase, segmentCount, wheelSegments, rotation, adjustBalance, playSound]);
+    }, [user, betAmount, gamePhase, segmentCount, wheelSegments, rotation, adjustBalance, playSound]);
     
     return (
         <div className="bg-[#0f172a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
@@ -247,7 +251,7 @@ const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <div className="w-64">
                         <button
                             onClick={handleSpin}
-                            disabled={gamePhase !== 'betting' || !profile || betAmount > profile.balance}
+                            disabled={gamePhase !== 'betting' || !user || betAmount > user.balance}
                             className="w-full h-full text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed"
                         >
                             Bet

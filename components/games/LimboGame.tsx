@@ -1,9 +1,13 @@
 
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import { useUser } from '../../contexts/UserContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
@@ -31,7 +35,7 @@ interface LimboGameProps {
 }
 
 const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { user, adjustBalance } = useUser();
   const [betAmount, setBetAmount] = useState(5.00);
   const [targetMultiplier, setTargetMultiplier] = useState(2.00);
   const [gamePhase, setGamePhase] = useState<GamePhase>('betting');
@@ -41,7 +45,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
   const [timer, setTimer] = useState(0);
   const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
-  const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+  const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
   const isMounted = useRef(true);
   const animationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { playSound } = useSound();
@@ -82,7 +86,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
   };
 
   const handleBet = async () => {
-    if (!profile || betAmount > profile.balance || gamePhase !== 'betting') return;
+    if (!user || betAmount > user.balance || gamePhase !== 'betting') return;
 
     await adjustBalance(-betAmount);
     playSound('bet');
@@ -208,7 +212,7 @@ const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
             </div>
 
             <div className="w-full md:w-64">
-                <button onClick={handleBet} disabled={!isBettingPhase || !profile || betAmount > profile.balance} className="w-full h-14 text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
+                <button onClick={handleBet} disabled={!isBettingPhase || !user || betAmount > user.balance} className="w-full h-14 text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
                     Bet
                 </button>
             </div>

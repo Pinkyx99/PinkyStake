@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BoxItem } from '../../../types';
-import { useUser } from '../../../contexts/UserContext';
+import { useUser } from '../../../contexts/UserContext.tsx';
 import { useSound } from '../../../hooks/useSound';
 
 interface WinItemModalProps {

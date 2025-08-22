@@ -80,8 +80,8 @@ const DoorComponent = React.forwardRef<HTMLDivElement, DoorComponentProps>(({ is
         </div>
       </div>
       
-      {/* Wall behind the door (only rendered for locked doors during animation) */}
-      {!isSafe && (
+      {/* Wall behind the door (only rendered for locked doors during animation to prevent cheating) */}
+      {!isSafe && (animationState === 'thud' || isRevealed) && (
         <div className="door-wall-behind">
             <BrickWallIcon />
         </div>

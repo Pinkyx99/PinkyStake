@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import CloseIcon from '../../icons/CloseIcon';
+import CloseIcon from '../../icons/CloseIcon.tsx';
 
 const PumpRulesModal: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;

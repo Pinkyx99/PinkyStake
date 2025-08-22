@@ -79,8 +79,8 @@ type SpinResult = {
 type ViewMode = 'Browsing' | 'Spinning';
 
 const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, case: currentCase }) => {
-    const { profile, adjustBalance } = useUser();
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const { user, adjustBalance } = useUser();
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
     const { playSound } = useSound();
     const isMounted = useRef(true);
 
@@ -110,7 +110,7 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
     
     const handleSpin = useCallback(async (isDemo: boolean) => {
         const totalCost = currentCase.price * caseCount;
-        if (isSpinning || (!isDemo && (!profile || profile.balance < totalCost))) return;
+        if (isSpinning || (!isDemo && (!user || user.balance < totalCost))) return;
         
         if (!isDemo) await adjustBalance(-totalCost);
         
@@ -178,7 +178,7 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
                 }
             }, spinDuration);
         }, 100);
-    }, [profile, caseCount, currentCase, isSpinning, adjustBalance, playSound, pickWinningItem]);
+    }, [user, caseCount, currentCase, isSpinning, adjustBalance, playSound, pickWinningItem]);
 
     const handleModalClose = () => {
         setMultiWonItems(null);
@@ -250,7 +250,7 @@ const CSGOGame: React.FC<{ onBack: () => void; case: CSGOCase }> = ({ onBack, ca
                                     {[1, 2, 3, 4, 5].map(num => <button key={num} onClick={() => !isSpinning && setCaseCount(num)} className={`csgo-v2-count-btn ${caseCount === num ? 'active' : ''}`}>{num}</button>)}
                                 </div>
                                 <div className="csgo-v2-action-btns">
-                                    <button onClick={() => handleSpin(false)} disabled={isSpinning || (profile && profile.balance < totalCost)} className="csgo-v2-open-btn">
+                                    <button onClick={() => handleSpin(false)} disabled={isSpinning || (user && user.balance < totalCost)} className="csgo-v2-open-btn">
                                         Open For ${totalCost.toFixed(2)}
                                     </button>
                                     <button onClick={() => handleSpin(true)} disabled={isSpinning} className="csgo-v2-demo-btn">Demo</button>

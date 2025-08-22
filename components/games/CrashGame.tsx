@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import { useUser } from '../../contexts/UserContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
 const WAITING_TIME = 7000;
+const MULTIPLIER_SPEED = 10000; // Increased to slow down the curve for a smoother feel
 
 type GamePhase = 'waiting' | 'running' | 'crashed';
 type Point = { t: number; m: number }; // time, multiplier
@@ -17,37 +18,20 @@ type Point = { t: number; m: number }; // time, multiplier
 type OtherPlayer = {
   id: number;
   name: string;
+  avatarUrl: string;
   bet: number;
   cashoutAt: number | null;
   status: 'waiting' | 'playing' | 'cashed_out' | 'lost';
 };
 
 const FAKE_USERNAMES = ['RocketMan', 'ToTheMoon', 'DiamondHand', 'CrashKing', 'GambleGod', 'HighRoller', 'LuckyDuck', 'Winner22', 'Player1337', 'Stonks'];
-
-const PlayerBetsList: React.FC<{ players: OtherPlayer[] }> = ({ players }) => {
-    return (
-        <div className="flex flex-col h-full">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider pb-2 border-b-2 border-slate-700/50 mb-2">Current Round</h3>
-            <div className="flex-grow overflow-y-auto player-bets-list">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 items-center text-xs">
-                    {players.map(p => (
-                        <React.Fragment key={p.id}>
-                            <div className="truncate font-semibold text-slate-300">{p.name}</div>
-                            <div className="font-mono text-slate-400">{p.bet.toFixed(2)}</div>
-                            <div className={`font-bold font-mono text-right ${
-                                p.status === 'cashed_out' ? 'text-green-400' :
-                                p.status === 'lost' ? 'text-red-500' : 'text-slate-500'
-                            }`}>
-                                {p.status === 'cashed_out' && p.cashoutAt ? `${p.cashoutAt.toFixed(2)}x` : p.status === 'lost' ? 'Lost' : '-'}
-                            </div>
-                        </React.Fragment>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
+const FAKE_AVATARS = [
+    'https://i.imgur.com/s6p4eF8.png',
+    'https://i.imgur.com/5J7m1jR.png',
+    'https://i.imgur.com/9n9s8Z2.png',
+    'https://i.imgur.com/cO1k2L4.png',
+    'https://i.imgur.com/z1kH0B5.png',
+];
 
 const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { profile, adjustBalance } = useUser();
@@ -70,6 +54,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const startTimeRef = useRef<number | null>(null);
     const crashPointRef = useRef(1.0);
+    const pathRef = useRef<Point[]>([{t: 0, m: 1.0}]);
     
     const isMounted = useRef(true);
     const phaseRef = useRef(phase);
@@ -120,17 +105,17 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
     
     const generateCrashPoint = () => {
-        if (Math.random() < 0.01) return 1.00;
-        const r = Math.random() * 100;
-        let crashPoint: number;
-        if (r < 0.10) { crashPoint = 1000 + Math.random() * 9000; }
-        else if (r < 0.10 + 1.98) { crashPoint = 50 + Math.random() * 950; }
-        else if (r < 0.10 + 1.98 + 4.95) { crashPoint = 20 + Math.random() * 30; }
-        else if (r < 0.10 + 1.98 + 4.95 + 9.90) { crashPoint = 10 + Math.random() * 10; }
-        else if (r < 0.10 + 1.98 + 4.95 + 9.90 + 14.0) { crashPoint = 7 + Math.random() * 3; }
-        else if (r < 0.10 + 1.98 + 4.95 + 9.90 + 14.0 + 19.80) { crashPoint = 5 + Math.random() * 2; }
-        else { const lowR = Math.random(); crashPoint = 1.01 + Math.pow(lowR, 3) * 3.99; }
-        return Math.floor(crashPoint * 100) / 100;
+        // This function implements the odds provided: P(crash >= x) = 99 / x
+        // We use inverse transform sampling.
+        const r = Math.random();
+        // The formula for the crash point `c` is derived from `u = 1 - (99/c)`, where u is a uniform random number.
+        // This simplifies to c = 99 / (1-u). Since (1-u) is also uniform, we can just use `r`.
+        const crashPoint = 0.99 / r;
+        
+        // Clamp the minimum crash point to 1.00 and cap at a high value for stability.
+        const result = Math.min(1_000_000, Math.max(1.00, crashPoint));
+    
+        return Math.floor(result * 100) / 100; // Return with 2 decimal places
     };
 
 
@@ -139,6 +124,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         let intervalId: ReturnType<typeof setInterval> | undefined;
 
         if (phase === 'waiting') {
+            pathRef.current = [{t: 0, m: 1.0}];
             setMultiplier(1.00);
             setCashedOutMultiplier(null);
             setActiveBet(null);
@@ -148,6 +134,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             const newPlayers: OtherPlayer[] = Array.from({ length: numPlayers }).map((_, i) => ({
                 id: i,
                 name: FAKE_USERNAMES[Math.floor(Math.random() * FAKE_USERNAMES.length)] + (Math.floor(Math.random() * 900) + 100),
+                avatarUrl: FAKE_AVATARS[Math.floor(Math.random() * FAKE_AVATARS.length)],
                 bet: parseFloat((Math.random() * 50 + 1).toFixed(2)),
                 cashoutAt: null,
                 status: 'waiting',
@@ -158,6 +145,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             timerId = setTimeout(() => { if (isMounted.current) setPhase('running'); }, WAITING_TIME);
         } else if (phase === 'running') {
             crashPointRef.current = generateCrashPoint();
+            pathRef.current = [];
             startTimeRef.current = performance.now();
             if (queuedBet) { setActiveBet(queuedBet); setQueuedBet(null); }
 
@@ -171,7 +159,7 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             playersWithCashouts.forEach(player => {
                 if (player.cashoutAt) {
-                    const cashoutTimeMs = 5000 * Math.log(player.cashoutAt);
+                    const cashoutTimeMs = MULTIPLIER_SPEED * Math.log(player.cashoutAt);
                     setTimeout(() => {
                         if (isMounted.current && phaseRef.current === 'running') {
                             setOtherPlayers(prev => prev.map(p => p.id === player.id ? { ...p, status: 'cashed_out' } : p));
@@ -194,9 +182,9 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         const ctx = canvas.getContext('2d'); if (!ctx) return;
         
         let animationFrameId: number;
-        let path: Point[] = [];
         
         const draw = (time: number) => {
+            if (!isMounted.current) return;
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width * dpr;
@@ -205,14 +193,24 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             const { width, height } = rect;
 
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#0f172a';
+            
+            // Background Gradient
+            const bgGradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height));
+            bgGradient.addColorStop(0, '#1e293b');
+            bgGradient.addColorStop(1, '#0f172a');
+            ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, width, height);
 
-            if (phase === 'running') {
-                const elapsedSinceStart = time - startTimeRef.current!;
-                const currentMultiplier = Math.exp(elapsedSinceStart / 5000);
+            if (phase === 'running' && startTimeRef.current) {
+                const elapsedSinceStart = time - startTimeRef.current;
+                const currentMultiplier = Math.exp(elapsedSinceStart / MULTIPLIER_SPEED);
+                
+                if (Math.floor(multiplier * 10) !== Math.floor(currentMultiplier * 10)) {
+                    playSound('crash_tick', { pitch: currentMultiplier });
+                }
+
                 if (currentMultiplier >= crashPointRef.current) {
-                    playSound('lose');
+                    playSound('crash_explode');
                     if (isMounted.current) {
                         setMultiplier(crashPointRef.current);
                         setHistory(h => [crashPointRef.current, ...h].slice(0, 20));
@@ -224,100 +222,93 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 }
             }
 
-            const elapsed = phase === 'waiting' ? 0 : (performance.now() - (startTimeRef.current ?? performance.now()));
+            const elapsed = phase === 'running' && startTimeRef.current ? (performance.now() - startTimeRef.current) : 0;
             const currentTime = Math.max(0, elapsed / 1000);
-            path.push({ t: currentTime, m: multiplier });
-            if (path.length > 200) path.shift();
             
-            // Camera/View logic
-            const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+            if (phase === 'running') {
+                pathRef.current.push({ t: currentTime, m: multiplier });
+            }
+            if (pathRef.current.length > 500) pathRef.current.shift();
+            
+            const path = pathRef.current;
+            const padding = { top: 20, right: 20, bottom: 40, left: 60 };
             const viewWidth = width - padding.left - padding.right;
             const viewHeight = height - padding.top - padding.bottom;
-            const maxTime = Math.max(5, path[path.length - 1]?.t * 1.2 || 5);
-            const maxMult = Math.max(2, path[path.length - 1]?.m * 1.2 || 2);
+            
+            const latestPoint = path[path.length - 1];
+            const maxTime = Math.max(5, (latestPoint?.t || 0) * 1.25);
+            const maxMult = Math.max(2.4, (latestPoint?.m || 1) * 1.25);
             
             const worldToScreen = (t: number, m: number) => ({
                 x: padding.left + (t / maxTime) * viewWidth,
                 y: height - padding.bottom - ((m - 1) / (maxMult - 1)) * viewHeight
             });
 
-            const drawAxes = () => {
-                ctx.strokeStyle = "rgba(51, 65, 85, 0.5)";
-                ctx.fillStyle = "#64748b";
-                ctx.font = "10px Poppins";
-                ctx.lineWidth = 1;
+            // Draw Axes
+            ctx.strokeStyle = "rgba(51, 65, 85, 0.5)";
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "12px Poppins";
+            ctx.lineWidth = 1;
 
-                // Y-Axis (Multiplier)
-                const yStep = maxMult < 10 ? 1 : maxMult < 50 ? 5 : maxMult < 200 ? 20 : 100;
-                for (let i = 1; i < maxMult; i += yStep) {
-                    if (i < 1) continue;
-                    const yPos = height - padding.bottom - ((i) / (maxMult - 1)) * (height - padding.top - padding.bottom);
-                    ctx.beginPath(); ctx.moveTo(padding.left - 5, yPos); ctx.lineTo(width - padding.right, yPos); ctx.stroke();
-                    ctx.fillText(`${(i + 1).toFixed(0)}x`, padding.left - 30, yPos + 3);
-                }
-                
-                // X-Axis (Time)
-                const xStep = maxTime < 10 ? 1 : 2;
-                for (let i = 0; i < maxTime; i += xStep) {
-                    if(i === 0) continue;
-                    const xPos = padding.left + (i / maxTime) * (width - padding.left - padding.right);
-                    ctx.beginPath(); ctx.moveTo(xPos, padding.top); ctx.lineTo(xPos, height - padding.bottom + 5); ctx.stroke();
-                    ctx.fillText(`${i}s`, xPos - 5, height - padding.bottom + 15);
-                }
-            };
+            const yAxisTicks = 5;
+            for (let i = 1; i <= yAxisTicks; i++) {
+                const m = 1 + (i / yAxisTicks) * (maxMult - 1);
+                const yPos = worldToScreen(0, m).y;
+                ctx.beginPath(); ctx.moveTo(padding.left - 5, yPos); ctx.lineTo(width - padding.right, yPos); ctx.stroke();
+                ctx.fillText(`${m.toFixed(2)}x`, padding.left - 50, yPos + 4);
+            }
+            
+            const xAxisTicks = 5;
+            for (let i = 1; i <= xAxisTicks; i++) {
+                const t = (i / xAxisTicks) * maxTime;
+                const xPos = worldToScreen(t, 1).x;
+                ctx.beginPath(); ctx.moveTo(xPos, padding.top); ctx.lineTo(xPos, height - padding.bottom + 5); ctx.stroke();
+                ctx.fillText(`${t.toFixed(0)}s`, xPos - 5, height - padding.bottom + 20);
+            }
 
-            const drawGraph = (points: {x: number, y: number}[]) => {
-                if (points.length < 2) return;
+            // Draw Graph
+            const screenPoints = path.map(p => worldToScreen(p.t, p.m));
+            if (screenPoints.length > 1) {
                 const path2d = new Path2D();
-                path2d.moveTo(points[0].x, points[0].y);
-                points.forEach(p => path2d.lineTo(p.x, p.y));
+                path2d.moveTo(screenPoints[0].x, screenPoints[0].y);
+                screenPoints.slice(1).forEach(p => path2d.lineTo(p.x, p.y));
 
                 const fillPath = new Path2D(path2d);
-                fillPath.lineTo(points[points.length-1].x, height - padding.bottom);
-                fillPath.lineTo(points[0].x, height - padding.bottom);
+                fillPath.lineTo(screenPoints[screenPoints.length-1].x, height - padding.bottom);
+                fillPath.lineTo(screenPoints[0].x, height - padding.bottom);
                 fillPath.closePath();
                 
-                const gradient = ctx.createLinearGradient(0, height, 0, 0);
-                gradient.addColorStop(0, 'rgba(251, 146, 60, 0)');
-                gradient.addColorStop(0.8, 'rgba(251, 146, 60, 0.4)');
-                ctx.fillStyle = gradient;
+                const fillGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+                fillGradient.addColorStop(0, 'rgba(249, 115, 22, 0.4)');
+                fillGradient.addColorStop(1, 'rgba(17, 24, 39, 0)');
+                ctx.fillStyle = fillGradient;
                 ctx.fill(fillPath);
                 
-                ctx.strokeStyle = 'white'; ctx.lineWidth = 2;
-                ctx.shadowColor = 'rgba(255,255,255,0.5)'; ctx.shadowBlur = 10;
+                const lineGradient = ctx.createLinearGradient(padding.left, 0, width - padding.right, 0);
+                lineGradient.addColorStop(0, '#60a5fa');
+                lineGradient.addColorStop(0.5, '#facc15');
+                lineGradient.addColorStop(1, '#f97316');
+                ctx.strokeStyle = lineGradient;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = 'rgba(253, 186, 116, 0.5)';
+                ctx.shadowBlur = 25;
                 ctx.stroke(path2d);
                 ctx.shadowBlur = 0;
-            };
 
-            const drawRocket = (pos: {x:number, y:number}, angle: number, isCrashed: boolean) => {
-                if (isCrashed) {
-                    ctx.fillStyle = `rgba(248, 113, 113, ${Math.random() * 0.5 + 0.5})`;
+                const lastPoint = screenPoints[screenPoints.length - 1];
+                if (lastPoint && phase === 'running') {
+                    const glow = ctx.createRadialGradient(lastPoint.x, lastPoint.y, 0, lastPoint.x, lastPoint.y, 20);
+                    glow.addColorStop(0, 'rgba(250, 204, 21, 0.8)');
+                    glow.addColorStop(1, 'rgba(250, 204, 21, 0)');
+                    ctx.fillStyle = glow;
+                    ctx.fillRect(lastPoint.x - 20, lastPoint.y - 20, 40, 40);
+
                     ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, 15 + Math.random() * 10, 0, Math.PI * 2);
+                    ctx.arc(lastPoint.x, lastPoint.y, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fde047';
                     ctx.fill();
-                    return;
                 }
-                ctx.save();
-                ctx.translate(pos.x, pos.y);
-                ctx.rotate(angle);
-                ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 20;
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.moveTo(10, 0); ctx.lineTo(-7, 5); ctx.lineTo(-7, -5); ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-            };
-
-            drawAxes();
-            
-            const screenPoints = path.map(p => worldToScreen(p.t, p.m));
-            drawGraph(screenPoints);
-
-            const lastPoint = screenPoints[screenPoints.length - 1];
-            if (lastPoint) {
-                const prevPoint = screenPoints[screenPoints.length - 2] || {x: padding.left, y: height-padding.bottom};
-                const angle = Math.atan2(lastPoint.y - prevPoint.y, lastPoint.x - prevPoint.x);
-                drawRocket(lastPoint, angle, phase === 'crashed');
             }
             
             animationFrameId = requestAnimationFrame(draw);
@@ -328,9 +319,9 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }, [phase, multiplier, playSound]);
     
     const getMultiplierClass = () => {
-        if (cashedOutMultiplier) return 'crash-multiplier-text-cashed';
-        if (phase === 'crashed') return 'crash-multiplier-text-crashed';
-        if (phase === 'running') return 'crash-multiplier-text-running';
+        if (cashedOutMultiplier) return 'text-green-400';
+        if (phase === 'crashed') return 'text-red-500 animate-crash-text-shake';
+        if (phase === 'running') return 'text-white';
         return 'text-slate-500';
     };
 
@@ -362,9 +353,20 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </button>
         )
     }, [phase, activeBet, multiplier, cashedOutMultiplier, queuedBet, betAmount, profile, handleCashout, handleBetButton, isBettingPhase]);
+    
+    const sortedPlayers = useMemo(() => {
+        return [...otherPlayers].sort((a, b) => {
+            const aCashed = a.status === 'cashed_out';
+            const bCashed = b.status === 'cashed_out';
+            if (aCashed && !bCashed) return -1;
+            if (!aCashed && bCashed) return 1;
+            if (aCashed && bCashed) return (b.cashoutAt || 0) - (a.cashoutAt || 0);
+            return b.bet - a.bet;
+        });
+    }, [otherPlayers]);
 
     return (
-    <div className="bg-[#1a1d3a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
+    <div className="bg-[#0f172a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
       {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
       <header className="flex items-center justify-between p-3 shrink-0 z-20 bg-[#1a1d3a]/80 backdrop-blur-sm">
         <div className="flex-1"><button onClick={onBack}><ArrowLeftIcon className="w-6 h-6" /></button></div>
@@ -372,41 +374,92 @@ const CrashGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <div className="flex-1 flex justify-end items-center gap-3"><button><SoundOnIcon className="w-5 h-5"/></button><button><GameRulesIcon className="w-5 h-5"/></button></div>
       </header>
       
-      <main className="flex-grow w-full flex overflow-hidden">
-        <div className="flex-grow flex flex-col">
-            <div className="flex-grow relative crash-graph-container">
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    <div className="text-center">
-                        {phase === 'waiting' && (
-                            <div className="flex flex-col items-center"><p className="text-4xl text-slate-400">Next round in</p><p className="text-7xl text-slate-200 font-bold">{countdown.toFixed(1)}s</p></div>
-                        )}
-                        {(phase === 'running' || phase === 'crashed') && (
-                            <div className="flex flex-col items-center">
-                                {phase === 'crashed' && <p className="text-4xl font-semibold text-red-500">Crashed at</p>}
-                                <h2 className={`font-bebas text-8xl transition-colors duration-300 ${getMultiplierClass()}`}>{multiplier.toFixed(2)}x</h2>
-                                <p className="text-sm text-slate-300/80 tracking-widest font-semibold">BETS {otherPlayers.length + (activeBet ? 1 : 0)}</p>
-                                {cashedOutMultiplier && (<p className="text-2xl font-bold mt-2 crash-multiplier-text-cashed">CASHED OUT {cashedOutMultiplier.toFixed(2)}X</p>)}
-                            </div>
-                        )}
+      <main className="flex-grow w-full flex flex-col relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 p-2 z-10">
+            <div className="flex items-center gap-2 overflow-x-auto" style={{'scrollbarWidth': 'none'}}>
+                {history.map((h, i) => (
+                    <div key={i} className={`px-3 py-1 text-xs font-bold rounded-full shrink-0 ${h >= 1.95 ? 'bg-green-500/30 text-green-300' : 'bg-slate-700/50 text-slate-300'}`}>
+                        {h.toFixed(2)}x
                     </div>
+                ))}
+            </div>
+        </div>
+            
+        <div className="flex-grow relative">
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+            
+            {phase === 'crashed' && <div className="absolute inset-0 bg-red-600/20 animate-crash-flash pointer-events-none z-20"></div>}
+            
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center">
+                    {phase === 'waiting' && (
+                        <div className="flex flex-col items-center">
+                            <p className="text-sm font-bold text-slate-400 tracking-widest uppercase">Next Round In</p>
+                            <p className="text-7xl text-slate-200 font-bold">{countdown.toFixed(1)}s</p>
+                        </div>
+                    )}
+                    {(phase === 'running' || phase === 'crashed') && (
+                        <div className="flex flex-col items-center">
+                            {phase === 'crashed' && <p className="text-2xl font-semibold text-red-500 animate-crash-text-shake">Crashed at</p>}
+                            {phase === 'running' && <p className="text-sm font-bold text-slate-400 tracking-widest uppercase">Current Round</p>}
+                            <h2 className={`font-extrabold text-9xl transition-colors duration-300 ${getMultiplierClass()}`}>{multiplier.toFixed(2)}x</h2>
+                        </div>
+                    )}
+                    {cashedOutMultiplier && (
+                        <div className="mt-4 bg-slate-900/80 px-4 py-2 rounded-lg">
+                            <p className="text-lg font-bold text-green-400">Cashed Out @ {cashedOutMultiplier.toFixed(2)}x</p>
+                        </div>
+                    )}
                 </div>
             </div>
-            <footer className="shrink-0 bg-[#0f172a] p-3 border-t-2 border-slate-800 z-20">
-                <div className="w-full max-w-lg mx-auto flex items-stretch justify-between gap-4">
-                    <div className="flex items-center gap-2 p-1 bg-slate-800 rounded-md">
-                        <input type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={!isBettingPhase || !!queuedBet} className="w-24 bg-transparent border-0 text-center font-bold text-lg focus-visible:ring-0 disabled:text-gray-400"/>
-                        <span className="text-gray-400 font-semibold pr-2">EUR</span>
-                        <button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={!isBettingPhase || !!queuedBet} className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 rounded-sm disabled:opacity-50 h-full">2x</button>
-                        <button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={!isBettingPhase || !!queuedBet} className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 rounded-sm disabled:opacity-50 h-full">1/2</button>
-                    </div>
-                    <div className="w-64 h-14">{actionButton}</div>
+            
+             <div className="absolute top-16 bottom-4 right-4 w-60 space-y-1.5 z-10">
+                <div className="h-full overflow-y-auto pr-2" style={{ scrollbarWidth: 'none' }}>
+                    {activeBet && (
+                        <div className={`sticky top-0 z-10 transition-all duration-300 rounded-full px-3 py-2 text-sm flex items-center justify-between gap-2 backdrop-blur-sm mb-2 border ${
+                            cashedOutMultiplier ? 'bg-green-500/20 border-green-500/30' : 'bg-blue-500/20 border-blue-500/30'
+                        }`}>
+                            <div className="flex items-center gap-2 truncate">
+                                <img src={'https://i.imgur.com/sIqj4t2.png'} alt="user avatar" className="w-6 h-6 rounded-full"/>
+                                <span className="truncate font-bold text-white">{profile?.username}</span>
+                            </div>
+                            {cashedOutMultiplier ? (
+                                <div className="text-right">
+                                    <span className="font-bold text-green-300 shrink-0">{cashedOutMultiplier.toFixed(2)}x</span>
+                                    <p className="text-xs text-green-400">+{(activeBet * cashedOutMultiplier - activeBet).toFixed(2)}</p>
+                                </div>
+                            ) : (
+                                <span className="font-semibold text-yellow-300 shrink-0">${activeBet.toFixed(2)}</span>
+                            )}
+                        </div>
+                    )}
+                    {sortedPlayers.map(p => (
+                        <div key={p.id} className={`transition-all duration-300 rounded-full pl-2 pr-3 py-1.5 text-xs flex items-center justify-between gap-2 backdrop-blur-sm ${
+                            p.status === 'cashed_out' ? 'bg-slate-800/60' : p.status === 'lost' ? 'bg-red-900/40 opacity-60' : 'bg-slate-900/60'
+                        }`}>
+                            <div className="flex items-center gap-1.5 truncate">
+                                <img src={p.avatarUrl} alt={p.name} className="w-5 h-5 rounded-full"/>
+                                <span className="truncate text-slate-300">{p.name}</span>
+                            </div>
+                            {p.status === 'cashed_out' && <span className="font-bold text-green-400 shrink-0">{p.cashoutAt?.toFixed(2)}x</span>}
+                            {(p.status === 'playing' || p.status === 'waiting') && <span className="font-semibold text-yellow-400 shrink-0">${p.bet.toFixed(2)}</span>}
+                        </div>
+                    ))}
                 </div>
-            </footer>
+            </div>
         </div>
-        <div className="w-64 lg:w-72 shrink-0 bg-slate-900/50 p-3 flex flex-col border-l-2 border-slate-800">
-           <PlayerBetsList players={otherPlayers} />
-        </div>
+
+        <footer className="shrink-0 bg-[#1e293b] p-3 border-t-2 border-slate-800 z-20">
+            <div className="w-full max-w-lg mx-auto flex items-stretch justify-between gap-4">
+                <div className="flex items-center gap-2 p-1 bg-slate-800 rounded-md">
+                    <input type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={!isBettingPhase || !!queuedBet} className="w-24 bg-transparent border-0 text-center font-bold text-lg focus-visible:ring-0 disabled:text-gray-400"/>
+                    <span className="text-gray-400 font-semibold pr-2">EUR</span>
+                    <button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={!isBettingPhase || !!queuedBet} className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 rounded-sm disabled:opacity-50 h-full">2x</button>
+                    <button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={!isBettingPhase || !!queuedBet} className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 rounded-sm disabled:opacity-50 h-full">1/2</button>
+                </div>
+                <div className="w-64 h-14">{actionButton}</div>
+            </div>
+        </footer>
       </main>
     </div>
   );

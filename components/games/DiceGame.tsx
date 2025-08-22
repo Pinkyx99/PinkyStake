@@ -1,6 +1,10 @@
 
 
 
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import PlusIcon from '../icons/PlusIcon';
 import MinusIcon from '../icons/MinusIcon';
@@ -10,9 +14,9 @@ import SoundOnIcon from '../icons/SoundOnIcon';
 import GameRulesIcon from '../icons/GameRulesIcon';
 import ArrowLeftIcon from '../icons/ArrowLeftIcon';
 import SwitchIcon from '../icons/SwitchIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
 import DiceRulesModal from './dice/DiceRulesModal';
-import { useUser } from '../../contexts/UserContext';
+import { useUser } from '../../contexts/UserContext.tsx';
 import { useSound } from '../../hooks/useSound';
 import WinAnimation from '../WinAnimation';
 
@@ -30,7 +34,7 @@ interface DiceGameProps {
 }
 
 const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { user, adjustBalance } = useUser();
   const [betAmount, setBetAmount] = useState(5.00);
   const [betInput, setBetInput] = useState(betAmount.toFixed(2));
   const [mode, setMode] = useState<Mode>('over');
@@ -42,7 +46,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
   const [timer, setTimer] = useState(0);
   const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
 
-  const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+  const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
   const lastInputSource = useRef<'roll' | 'multiplier' | 'chance' | null>(null);
   const isMounted = useRef(true);
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -142,7 +146,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
   };
 
   const handleBet = async () => {
-    if (!profile || betAmount > profile.balance || gamePhase !== 'betting') return;
+    if (!user || betAmount > user.balance || gamePhase !== 'betting') return;
 
     await adjustBalance(-betAmount);
     playSound('bet');
@@ -304,7 +308,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
 
             {/* Bet Button */}
             <div className="w-full md:w-48 h-14 md:h-auto">
-                <button onClick={handleBet} disabled={gamePhase !== 'betting' || !profile || betAmount > profile.balance} className="w-full h-full text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
+                <button onClick={handleBet} disabled={gamePhase !== 'betting' || !user || betAmount > user.balance} className="w-full h-full text-2xl font-bold rounded-md bg-green-500 hover:bg-green-600 transition-colors text-white uppercase disabled:bg-gray-500 disabled:cursor-not-allowed">
                     Bet
                 </button>
             </div>

@@ -1,22 +1,28 @@
 
+
+
+
+
+
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PumpRulesModal from './pump/PumpRulesModal';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useUser } from '../../contexts/UserContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PumpRulesModal from './pump/PumpRulesModal.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import { Button } from "../ui/button"
+} from "../ui/select.tsx"
+import { Label } from "../ui/label.tsx"
+import { Input } from "../ui/input.tsx"
+import { Button } from "../ui/button.tsx"
 
 
 const MIN_BET = 0.20;
@@ -83,7 +89,7 @@ const MultiplierHistoryBar = ({ history }: { history: { multiplier: number; bust
 );
 
 const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { user, adjustBalance } = useUser();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [difficulty, setDifficulty] = useState<Difficulty>('Hard');
@@ -97,7 +103,7 @@ const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         { multiplier: 1.23, busted: false }, { multiplier: 1.55, busted: false }, { multiplier: 1.98, busted: false }, { multiplier: 2.56, busted: false }, { multiplier: 3.36, busted: false }, { multiplier: 4.48, busted: false }, { multiplier: 6.08, busted: false }, { multiplier: 8.41, busted: true }, { multiplier: 11.92, busted: false }, { multiplier: 17.34, busted: false },
     ].reverse());
 
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
     const isMounted = useRef(true);
     const { playSound } = useSound();
     
@@ -135,7 +141,7 @@ const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         
         const isFirstPump = gameState === 'config';
         if (isFirstPump) {
-            if (!profile || betAmount > profile.balance) return;
+            if (!user || betAmount > user.balance) return;
             playSound('bet');
             await adjustBalance(-betAmount);
             if (!isMounted.current) return;
@@ -162,7 +168,7 @@ const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 setIsPumping(false);
              }, 200);
         }
-    }, [gameState, isPumping, difficulty, pumpCount, betAmount, profile, adjustBalance, playSound]);
+    }, [gameState, isPumping, difficulty, pumpCount, betAmount, user, adjustBalance, playSound]);
     
     const handleCashout = async () => {
         if (gameState !== 'playing' || pumpCount === 0 || isPumping) return;
@@ -186,7 +192,7 @@ const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         return 'Bet Again';
     }, [gameState]);
 
-    const canBet = profile && betAmount <= profile.balance;
+    const canBet = user && betAmount <= user.balance;
     const isConfigPhase = gameState === 'config';
     const canPumpMore = gameState === 'playing' && pumpCount < PUMP_DATA[difficulty].length;
 
@@ -197,7 +203,7 @@ const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
                 <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white"><ArrowLeftIcon className="w-6 h-6" /></button>
-                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-6 h-6"/></button>
                 </div>
                 <div className="flex-1 flex justify-center bg-slate-900/50 backdrop-blur-sm rounded-md px-4 py-1.5 border border-slate-700/50">
                     <span className="text-lg font-bold text-white">{animatedBalance.toFixed(2)}</span>

@@ -2,7 +2,7 @@
 import React from 'react';
 import ArrowLeftIcon from '../../icons/ArrowLeftIcon';
 import useAnimatedBalance from '../../../hooks/useAnimatedBalance';
-import { useUser } from '../../../contexts/UserContext';
+import { useUser } from '../../../contexts/UserContext.tsx';
 import { allMysteryBoxes } from './data';
 import MysteryBoxCard from './MysteryBoxCard';
 import type { MysteryBox } from '../../../types';
@@ -13,8 +13,8 @@ interface MysteryBoxLobbyProps {
 }
 
 const MysteryBoxLobby: React.FC<MysteryBoxLobbyProps> = ({ onBack, onNavigate }) => {
-    const { profile } = useUser();
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
+    const { user } = useUser();
+    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
 
     const handleSelectBox = (box: MysteryBox) => {
         onNavigate(`/game/mysterybox/${box.id}`);

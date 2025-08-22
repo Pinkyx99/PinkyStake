@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import type { BoxItem, MysteryBox } from '../../../types';
-import { useSound } from '../../../hooks/useSound';
+import { useSound } from '../../../hooks/useSound.ts';
 
 const shuffle = <T,>(array: T[]): T[] => {
     const newArray = [...array];
@@ -144,13 +144,9 @@ const UnboxingAnimation: React.FC<UnboxingAnimationProps> = ({ box, winningItem,
         <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-center font-poppins">
             <div className="w-full relative overflow-hidden h-64">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-red-500/80 z-20 pointer-events-none rounded-full shadow-[0_0_10px_red]"></div>
-                <div 
-                    ref={reelRef}
-                    className="absolute top-4 left-0 flex items-center gap-4"
-                    style={style}
-                >
+                <div ref={reelRef} className="absolute top-0 left-0 h-full flex items-center gap-4" style={style}>
                     {reelItems.map((item, index) => (
-                        <ItemCard ref={index === 0 ? firstCardRef : null} key={index} item={item} />
+                        <ItemCard key={`${item.id}-${index}`} item={item} ref={index === 0 ? firstCardRef : null} />
                     ))}
                 </div>
             </div>

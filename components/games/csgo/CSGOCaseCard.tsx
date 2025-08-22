@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import type { CSGOCase } from '../../../types';
-import CoinIcon from '../../icons/CoinIcon';
+import type { CSGOCase } from '../../../types.ts';
+import CoinIcon from '../../icons/CoinIcon.tsx';
 
 interface CSGOCaseCardProps {
     box: CSGOCase;
